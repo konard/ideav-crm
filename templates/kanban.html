@@ -1,0 +1,1135 @@
+<style>
+    /* CSS Variables */
+    :root {
+        --primary-color: #2563eb;
+        --primary-hover: #1d4ed8;
+        --primary-light: #3b82f6;
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+        /* Status header colors - darker gradient from red to purple for better white text readability */
+        --status-color-3689: #a85555;  /* Darker red - Лид */
+        --status-color-3689-light: #b86b6b;
+        --status-color-3691: #b87355;  /* Darker red-orange - Первичный контакт */
+        --status-color-3691-light: #c68565;
+        --status-color-3693: #b88655;  /* Darker orange - Квалификация */
+        --status-color-3693-light: #c69865;
+        --status-color-3695: #b8a555;  /* Darker yellow-orange - Отправлено КП */
+        --status-color-3695-light: #c6b365;
+        --status-color-2849: #a5b855;  /* Darker yellow - Презентация / демо */
+        --status-color-2849-light: #b3c665;
+        --status-color-2843: #86b855;  /* Darker yellow-green - Согласование */
+        --status-color-2843-light: #98c665;
+        --status-color-2806: #55b875;  /* Darker green - Триал / апробация */
+        --status-color-2806-light: #65c686;
+        --status-color-3697: #55b8a5;  /* Darker teal - Закрытие сделки */
+        --status-color-3697-light: #65c6b3;
+        --status-color-3699: #5586b8;  /* Darker blue - Оплата */
+        --status-color-3699-light: #6598c6;
+        --status-color-3701: #7355b8;  /* Darker blue-purple - Повторная оплата */
+        --status-color-3701-light: #8565c6;
+        --status-color-2824: #a555b8;  /* Darker purple - Отказ / срыв сделки */
+        --status-color-2824-light: #b365c6;
+    }
+
+    /* Kanban specific styles */
+    .kanban-board {
+        display: flex;
+        gap: 16px;
+        overflow-x: scroll; /* Always show horizontal scrollbar */
+        padding: 20px;
+        height: calc(100vh - 75px);
+        align-items: flex-start;
+    }
+
+    .kanban-column {
+        min-width: 300px;
+        background-color: var(--surface);
+        border-radius: 4px;
+        box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2),
+                    0 1px 1px 0 rgba(0,0,0,0.14),
+                    0 1px 3px 0 rgba(0,0,0,0.12);
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .kanban-column-header {
+        padding: 16px;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        color: white;
+        font-weight: 500;
+        font-size: 1rem;
+        letter-spacing: 0.0125em;
+        border-radius: 4px 4px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,0.2),
+                    0 4px 5px 0 rgba(0,0,0,0.14),
+                    0 1px 10px 0 rgba(0,0,0,0.12);
+        position: relative;
+    }
+
+    .kanban-add-button {
+        position: absolute;
+        right: 50px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 20px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .kanban-add-button:hover {
+        background-color: white;
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .kanban-column-header:hover .kanban-add-button {
+        display: flex;
+    }
+
+    /* Status-specific header colors */
+    .kanban-column-header[data-status-id="3689"] {
+        background: linear-gradient(135deg, var(--status-color-3689) 0%, var(--status-color-3689-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3691"] {
+        background: linear-gradient(135deg, var(--status-color-3691) 0%, var(--status-color-3691-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3693"] {
+        background: linear-gradient(135deg, var(--status-color-3693) 0%, var(--status-color-3693-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3695"] {
+        background: linear-gradient(135deg, var(--status-color-3695) 0%, var(--status-color-3695-light) 100%);
+    }
+    .kanban-column-header[data-status-id="2849"] {
+        background: linear-gradient(135deg, var(--status-color-2849) 0%, var(--status-color-2849-light) 100%);
+    }
+    .kanban-column-header[data-status-id="2843"] {
+        background: linear-gradient(135deg, var(--status-color-2843) 0%, var(--status-color-2843-light) 100%);
+    }
+    .kanban-column-header[data-status-id="2806"] {
+        background: linear-gradient(135deg, var(--status-color-2806) 0%, var(--status-color-2806-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3697"] {
+        background: linear-gradient(135deg, var(--status-color-3697) 0%, var(--status-color-3697-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3699"] {
+        background: linear-gradient(135deg, var(--status-color-3699) 0%, var(--status-color-3699-light) 100%);
+    }
+    .kanban-column-header[data-status-id="3701"] {
+        background: linear-gradient(135deg, var(--status-color-3701) 0%, var(--status-color-3701-light) 100%);
+    }
+    .kanban-column-header[data-status-id="2824"] {
+        background: linear-gradient(135deg, var(--status-color-2824) 0%, var(--status-color-2824-light) 100%);
+    }
+
+    .kanban-column-count {
+        background-color: rgba(255, 255, 255, 0.25);
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .kanban-column-body {
+        padding: 12px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .kanban-card {
+        background-color: var(--surface);
+        border: none;
+        border-radius: 4px;
+        padding: 16px;
+        padding-right: 44px; /* Make space for vertical icons on the right */
+        margin-bottom: 12px;
+        cursor: move;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative; /* Enable absolute positioning for icons */
+        box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2),
+                    0 1px 1px 0 rgba(0,0,0,0.14),
+                    0 1px 3px 0 rgba(0,0,0,0.12);
+    }
+
+    .kanban-card:hover {
+        box-shadow: 0 3px 5px -1px rgba(0,0,0,0.2),
+                    0 6px 10px 0 rgba(0,0,0,0.14),
+                    0 1px 18px 0 rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    .kanban-card.dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
+    }
+
+    .kanban-column-body.drag-over {
+        background-color: rgba(37, 99, 235, 0.1);
+        border: 2px dashed var(--primary-color);
+        border-radius: 8px;
+    }
+
+    .kanban-card-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        text-decoration: none;
+        display: block;
+    }
+
+    .kanban-card-title:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+
+    .kanban-card-field {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .kanban-card-field-label {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .kanban-card-amount {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-top: 8px;
+    }
+
+    .kanban-card-contacts {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        display: flex;
+        flex-direction: column; /* Stack icons vertically */
+        align-items: flex-end; /* Align icons to the right */
+        gap: 4px; /* Smaller gap for vertical stacking */
+    }
+
+    .kanban-card-contact-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        font-size: 14px;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .kanban-card-contact-icon.active {
+        background-color: rgba(25, 118, 210, 0.15);
+        color: #1976d2;
+        cursor: pointer;
+    }
+
+    .kanban-card-contact-icon.active:hover {
+        background-color: rgba(25, 118, 210, 0.25);
+        color: #1565c0;
+        transform: scale(1.1);
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .kanban-card-contact-icon.inactive {
+        background-color: rgba(226, 232, 240, 0.5); /* More transparent gray */
+        color: rgba(148, 163, 184, 0.5); /* More transparent gray text */
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .kanban-card-date {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: right;
+        margin-top: 4px;
+    }
+
+    .kanban-card-tasks-button {
+        height: 20px;
+        border-radius: 4px;
+        padding: 4px 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none; /* For anchor tags */
+        text-transform: none;
+        letter-spacing: 0.0178571429em;
+    }
+
+    .kanban-card-tasks-button.has-tasks {
+        background-color: #b8a555;
+        color: white;
+        box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2),
+                    0 1px 1px 0 rgba(0,0,0,0.14),
+                    0 1px 3px 0 rgba(0,0,0,0.12);
+    }
+
+    .kanban-card-tasks-button.has-tasks:hover {
+        background-color: #a59449;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 3px -2px rgba(0,0,0,0.2),
+                    0 3px 4px 0 rgba(0,0,0,0.14),
+                    0 1px 8px 0 rgba(0,0,0,0.12);
+    }
+
+    .kanban-card-tasks-button.no-tasks {
+        background-color: rgba(0, 0, 0, 0.12);
+        color: rgba(0, 0, 0, 0.38);
+        cursor: default;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+
+    .error {
+        background-color: #fee2e2;
+        color: #991b1b;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 20px;
+    }
+
+    /* Modal styles */
+    .kanban-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .kanban-modal-overlay.active {
+        display: flex;
+    }
+
+    .kanban-modal {
+        background-color: var(--surface);
+        border-radius: 8px;
+        box-shadow: var(--shadow-lg);
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .kanban-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .kanban-modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .kanban-modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .kanban-modal-close:hover {
+        background-color: var(--background);
+        color: var(--text-primary);
+    }
+
+    .kanban-modal-body {
+        padding: 24px;
+    }
+
+    .kanban-form-group {
+        margin-bottom: 16px;
+    }
+
+    .kanban-form-label {
+        display: block;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        font-size: 0.875rem;
+    }
+
+    .kanban-form-input,
+    .kanban-form-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+
+    .kanban-form-input:focus,
+    .kanban-form-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .kanban-form-static {
+        padding: 8px 12px;
+        background-color: var(--background);
+        border-radius: 6px;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+
+    .kanban-modal-footer {
+        padding: 16px 24px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .kanban-button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .kanban-button-primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .kanban-button-primary:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .kanban-button-primary:disabled {
+        background-color: var(--text-secondary);
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .kanban-button-secondary {
+        background-color: var(--background);
+        color: var(--text-primary);
+    }
+
+    .kanban-button-secondary:hover {
+        background-color: var(--border-color);
+    }
+</style>
+<div id="kanban"></div>
+
+<!-- Modal for adding new record -->
+<div id="addRecordModal" class="kanban-modal-overlay">
+    <div class="kanban-modal">
+        <div class="kanban-modal-header">
+            <h3 class="kanban-modal-title">Добавить запись</h3>
+            <button class="kanban-modal-close" onclick="closeAddRecordModal()">&times;</button>
+        </div>
+        <div class="kanban-modal-body">
+            <form id="addRecordForm">
+                <div class="kanban-form-group">
+                    <label class="kanban-form-label">Название</label>
+                    <input type="text" class="kanban-form-input" id="recordName" name="recordName" required>
+                </div>
+                <div class="kanban-form-group" id="innGroup" style="display:none;">
+                    <label class="kanban-form-label">ИНН</label>
+                    <input type="text" class="kanban-form-input" id="recordInn" name="recordInn">
+                </div>
+                <div class="kanban-form-group">
+                    <label class="kanban-form-label">Статус</label>
+                    <div class="kanban-form-static" id="recordStatus"></div>
+                </div>
+                <div class="kanban-form-group" id="distributorGroup" style="display:none;">
+                    <label class="kanban-form-label">Дистрибьютор</label>
+                    <select class="kanban-form-select" id="recordDistributor" name="recordDistributor">
+                        <option value="">Выберите дистрибьютора</option>
+                    </select>
+                </div>
+                <div class="kanban-form-group" id="phoneGroup" style="display:none;">
+                    <label class="kanban-form-label">Телефон</label>
+                    <input type="text" class="kanban-form-input" id="recordPhone" name="recordPhone">
+                </div>
+                <div class="kanban-form-group" id="emailGroup" style="display:none;">
+                    <label class="kanban-form-label">Email</label>
+                    <input type="email" class="kanban-form-input" id="recordEmail" name="recordEmail">
+                </div>
+                <div class="kanban-form-group" id="contactGroup" style="display:none;">
+                    <label class="kanban-form-label">Контактное лицо</label>
+                    <input type="text" class="kanban-form-input" id="recordContact" name="recordContact">
+                </div>
+                <div class="kanban-form-group" id="sourceGroup" style="display:none;">
+                    <label class="kanban-form-label">Источник</label>
+                    <select class="kanban-form-select" id="recordSource" name="recordSource">
+                        <option value="">Выберите источник</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="kanban-modal-footer">
+            <button class="kanban-button kanban-button-secondary" onclick="closeAddRecordModal()">Отмена</button>
+            <button class="kanban-button kanban-button-primary" onclick="submitAddRecord()" id="submitButton">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Kanban functionality
+var kanbanData = [];
+var statusesData = [];
+var sourcesData = [];
+var distributorsData = [];
+var currentStatusId = null;
+var currentStatusName = null;
+
+// Parse URL parameters to check for 'partners' parameter
+var urlParams = new URLSearchParams(window.location.search);
+var hasPartnersParam = urlParams.has('partners');
+
+// Helper function to lighten a color by a percentage
+function lightenColor(color, percent) {
+    // Handle hex colors (e.g., #a85555)
+    if (color.startsWith('#')) {
+        var num = parseInt(color.slice(1), 16);
+        var r = (num >> 16) + Math.round(2.55 * percent);
+        var g = ((num >> 8) & 0x00FF) + Math.round(2.55 * percent);
+        var b = (num & 0x0000FF) + Math.round(2.55 * percent);
+
+        // Ensure values stay within 0-255 range
+        r = Math.min(255, r);
+        g = Math.min(255, g);
+        b = Math.min(255, b);
+
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    }
+
+    // Handle rgb/rgba colors
+    if (color.startsWith('rgb')) {
+        var matches = color.match(/\d+/g);
+        if (matches && matches.length >= 3) {
+            var r = Math.min(255, parseInt(matches[0]) + Math.round(2.55 * percent));
+            var g = Math.min(255, parseInt(matches[1]) + Math.round(2.55 * percent));
+            var b = Math.min(255, parseInt(matches[2]) + Math.round(2.55 * percent));
+
+            if (matches.length === 4) {
+                return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + matches[3] + ')';
+            }
+            return 'rgb(' + r + ', ' + g + ', ' + b + ')';
+        }
+    }
+
+    // If color format is not recognized, return original color
+    return color;
+}
+
+function loadKanbanData(){
+    $('#kanban').html('<div class="loading">Загрузка данных канбана...</div>');
+
+    // Determine which endpoints to use based on 'partners' parameter
+    var tasksReportId = hasPartnersParam ? '3864' : '3769';
+    var statusesReportId = hasPartnersParam ? '3917' : '3796';
+
+    // Load tasks
+    var xhr1 = new XMLHttpRequest();
+    xhr1.open('GET', 'https://' + window.location.hostname + '/' + db + '/report/' + tasksReportId + '?JSON_KV', true);
+    xhr1.onload = function(){
+        if(xhr1.status === 200){
+            try{
+                kanbanData = JSON.parse(xhr1.responseText);
+                checkDataLoaded();
+            } catch(e){
+                showError('Ошибка парсинга данных задач: ' + e.message);
+            }
+        } else {
+            showError('Ошибка загрузки задач: ' + xhr1.status);
+        }
+    };
+    xhr1.onerror = function(){
+        showError('Ошибка сети при загрузке задач');
+    };
+    xhr1.send();
+
+    // Load statuses
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', 'https://' + window.location.hostname + '/' + db + '/report/' + statusesReportId + '?JSON_KV', true);
+    xhr2.onload = function(){
+        if(xhr2.status === 200){
+            try{
+                statusesData = JSON.parse(xhr2.responseText);
+                checkDataLoaded();
+            } catch(e){
+                showError('Ошибка парсинга данных статусов: ' + e.message);
+            }
+        } else {
+            showError('Ошибка загрузки статусов: ' + xhr2.status);
+        }
+    };
+    xhr2.onerror = function(){
+        showError('Ошибка сети при загрузке статусов');
+    };
+    xhr2.send();
+}
+
+function checkDataLoaded(){
+    if(kanbanData.length > 0 && statusesData.length > 0){
+        renderKanban();
+    }
+}
+
+function showError(message){
+    $('#kanban').html('<div class="error">' + message + '</div>');
+}
+
+function renderKanban(){
+    var html = '<div class="kanban-board">';
+
+    // Create a column for each status
+    statusesData.forEach(function(status){
+        var statusName = status['Статус'];
+        var statusId = status['СтатусID'];
+
+        // Filter tasks for this status
+        // Use flexible matching to handle cases where СтатусID might contain the status name instead of ID
+        var tasks = kanbanData.filter(function(task){
+            // Try matching by СтатусID (numeric ID or string ID)
+            if(task['СтатусID'] === statusId){
+                return true;
+            }
+            // Fallback: if task's СтатусID contains the status name, match by name
+            if(task['СтатусID'] === statusName){
+                return true;
+            }
+            // Also try matching task's Статус with status's Статус as a final fallback
+            if(task['Статус'] && task['Статус'] === statusName){
+                return true;
+            }
+            return false;
+        });
+
+        // Calculate total sum for this status
+        var totalSum = 0;
+        tasks.forEach(function(task){
+            if(task['Сумма']){
+                // Remove spaces and convert to number
+                var sumStr = task['Сумма'].replace(/\s/g, '');
+                var sum = parseFloat(sumStr);
+                if(!isNaN(sum)){
+                    totalSum += sum;
+                }
+            }
+        });
+
+        // Format sum with spaces as thousand separators
+        var formattedSum = totalSum.toLocaleString('ru-RU');
+
+        html += '<div class="kanban-column">';
+
+        // Check if status has a color field and use it for the header
+        var headerStyle = '';
+        if(status['color']){
+            // Use the color from API if available
+            // Generate a lighter version of the color for the gradient by increasing brightness
+            var baseColor = status['color'];
+            var lightColor = lightenColor(baseColor, 8); // Lighten by 8% to match existing gradient style
+            headerStyle = ' style="background: linear-gradient(135deg, ' + baseColor + ' 0%, ' + lightColor + ' 100%);"';
+        }
+
+        html += '<div class="kanban-column-header" data-status-id="' + statusId + '" data-status-name="' + statusName + '"' + headerStyle + '>';
+        // Truncate status name to 28 characters with '...' if longer
+        var displayStatusName = statusName.length > 28 ? statusName.substring(0, 28) + '...' : statusName;
+        html += '<span title="' + statusName + '">' + displayStatusName + ' (' + formattedSum + ' ₽)</span>';
+        html += '<button class="kanban-add-button" onclick="openAddRecordModal(\'' + statusId + '\', \'' + statusName.replace(/'/g, "\\'") + '\')">+</button>';
+        html += '<span class="kanban-column-count">' + tasks.length + '</span>';
+        html += '</div>';
+        html += '<div class="kanban-column-body" data-status-id="' + statusId + '">';
+
+        // Render tasks in this column
+        tasks.forEach(function(task){
+            html += renderCard(task);
+        });
+
+        html += '</div>';
+        html += '</div>';
+    });
+
+    html += '</div>';
+    $('#kanban').html(html);
+
+    // Initialize drag and drop
+    initDragAndDrop();
+}
+
+function renderCard(task){
+    var html = '<div class="kanban-card" draggable="true" data-lead-id="' + task['ЛидID'] + '" data-status-id="' + task['СтатусID'] + '">';
+
+    // Create title as a hyperlink to edit_obj page
+    var editUrl = '/' + db + '/edit_obj/' + task['ЛидID'];
+    html += '<a target="eo" href="' + editUrl + '" class="kanban-card-title" onclick="event.stopPropagation();">' + (task['Лид'] || '') + '</a>';
+
+    if(task['Контактное лицо']){
+        html += '<div class="kanban-card-field"><span class="kanban-card-field-label">Контакт:</span> ' + task['Контактное лицо'] + '</div>';
+    }
+
+    if(task['Примечание']){
+        html += '<div class="kanban-card-field"><span class="kanban-card-field-label">Примечание:</span> ' + task['Примечание'] + '</div>';
+    }
+
+    if(task['Сумма']){
+        html += '<div class="kanban-card-amount">' + task['Сумма'] + ' ₽</div>';
+    }
+
+    // Add contact icons at bottom right (vertically stacked)
+    html += '<div class="kanban-card-contacts">';
+
+    // Phone icon (on top)
+    var hasPhone = task['Телефон'] && task['Телефон'].trim() !== '';
+    if(hasPhone){
+        html += '<span class="kanban-card-contact-icon active" title="' + task['Телефон'] + '" onclick="copyContact(\'' + task['Телефон'] + '\', \'phone\', event)">📞</span>';
+    } else {
+        html += '<span class="kanban-card-contact-icon inactive" title="Телефон недоступен">📞</span>';
+    }
+
+    // Email icon (below)
+    var hasEmail = task['Email'] && task['Email'].trim() !== '';
+    if(hasEmail){
+        html += '<span class="kanban-card-contact-icon active" title="' + task['Email'] + '" onclick="copyContact(\'' + task['Email'] + '\', \'email\', event)">📧</span>';
+    } else {
+        html += '<span class="kanban-card-contact-icon inactive" title="Email недоступен">📧</span>';
+    }
+
+    // Date below contact icons (without "Дата:" label)
+    if(task['Дата']){
+        html += '<div class="kanban-card-date">' + task['Дата'] + '</div>';
+    }
+
+    html += '</div>';
+
+    // Add tasks button at the bottom of the card
+    var tasksCount = task['Задачи'] ? parseInt(task['Задачи']) : 0;
+    var buttonClass = tasksCount > 0 ? 'has-tasks' : 'no-tasks';
+
+    // Determine the correct URL based on partners parameter
+    var tasksUrl = '';
+    if(task['ЛидID']){
+        var frParam = hasPartnersParam ? 'FR_3879' : 'FR_3881';
+        tasksUrl = '/' + db + '/object/3596?' + frParam + '=@' + task['ЛидID'];
+    }
+
+    if(tasksCount > 0 && tasksUrl){
+        html += '<a href="' + tasksUrl + '" target="tasks" class="kanban-card-tasks-button ' + buttonClass + '" onclick="event.stopPropagation();">';
+        html += 'Задачи (' + tasksCount + ')';
+        html += '</a>';
+    } else {
+        html += '<button class="kanban-card-tasks-button ' + buttonClass + '" onclick="event.stopPropagation();">';
+        html += 'Задачи (' + tasksCount + ')';
+        html += '</button>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+function initDragAndDrop(){
+    var draggedElement = null;
+
+    // Handle drag start
+    $(document).on('dragstart', '.kanban-card', function(e){
+        draggedElement = this;
+        $(this).addClass('dragging');
+        e.originalEvent.dataTransfer.effectAllowed = 'move';
+        e.originalEvent.dataTransfer.setData('text/html', this.innerHTML);
+    });
+
+    // Handle drag end
+    $(document).on('dragend', '.kanban-card', function(e){
+        $(this).removeClass('dragging');
+        $('.kanban-column-body').removeClass('drag-over');
+    });
+
+    // Handle drag over
+    $(document).on('dragover', '.kanban-column-body', function(e){
+        if(e.preventDefault){
+            e.preventDefault();
+        }
+        e.originalEvent.dataTransfer.dropEffect = 'move';
+        $(this).addClass('drag-over');
+        return false;
+    });
+
+    // Handle drag enter
+    $(document).on('dragenter', '.kanban-column-body', function(e){
+        $(this).addClass('drag-over');
+    });
+
+    // Handle drag leave
+    $(document).on('dragleave', '.kanban-column-body', function(e){
+        $(this).removeClass('drag-over');
+    });
+
+    // Handle drop
+    $(document).on('drop', '.kanban-column-body', function(e){
+        if(e.stopPropagation){
+            e.stopPropagation();
+        }
+        $(this).removeClass('drag-over');
+
+        if(draggedElement){
+            var newStatusId = $(this).data('status-id');
+            var oldStatusId = $(draggedElement).data('status-id');
+            var leadId = $(draggedElement).data('lead-id');
+
+            // Only update if status changed
+            if(newStatusId !== oldStatusId){
+                // Move card visually
+                $(this).append(draggedElement);
+                $(draggedElement).data('status-id', newStatusId);
+
+                // Update counts
+                updateColumnCounts();
+
+                // Update via API
+                updateTaskStatus(leadId, newStatusId);
+            }
+        }
+
+        return false;
+    });
+}
+
+function updateColumnCounts(){
+    $('.kanban-column').each(function(){
+        var count = $(this).find('.kanban-card').length;
+        $(this).find('.kanban-column-count').text(count);
+    });
+}
+
+function updateTaskStatus(leadId, newStatusId){
+    var timestamp = Math.floor(Date.now() / 1000);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://' + window.location.hostname + '/' + db + '/_m_set/' + leadId + '?JSON', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function(){
+        if(xhr.status === 200){
+            try{
+                var response = JSON.parse(xhr.responseText);
+                console.log('Status updated:', response);
+            } catch(e){
+                console.error('Error parsing response:', e);
+            }
+        } else {
+            console.error('Error updating status:', xhr.status);
+        }
+    };
+    xhr.onerror = function(){
+        console.error('Network error updating status');
+    };
+
+    // Use different POST parameters based on whether 'partners' parameter is present
+    var postData;
+    if(hasPartnersParam){
+        postData = 't3838=' + newStatusId + '&t3947=' + timestamp + '&_xsrf=' + xsrf;
+    } else {
+        postData = 't2795=' + newStatusId + '&t3807=' + timestamp + '&_xsrf=' + xsrf;
+    }
+    xhr.send(postData);
+}
+
+// Copy contact to clipboard
+function copyContact(value, type, event){
+    // Prevent card drag from starting
+    if(event){
+        event.stopPropagation();
+    }
+
+    // Copy to clipboard using the legacy method for compatibility
+    var $temp = $("<input>");
+    $("body").append($temp);
+    $temp.val(value).select();
+    document.execCommand("copy");
+    $temp.remove();
+
+    // Show visual feedback
+    var icon = event.target;
+    var originalText = icon.textContent;
+    var originalTitle = icon.title;
+
+    // Change icon to checkmark temporarily
+    icon.textContent = '✓';
+    icon.title = 'Скопировано в буфер';
+    icon.style.backgroundColor = 'rgba(34, 197, 94, 0.25)'; // Green background
+    icon.style.color = 'rgba(34, 197, 94, 0.9)'; // Green text
+
+    // Restore original icon after 1.5 seconds
+    setTimeout(function(){
+        icon.textContent = originalText;
+        icon.title = originalTitle;
+        icon.style.backgroundColor = '';
+        icon.style.color = '';
+    }, 1500);
+}
+
+// Load sources and distributors data
+function loadSourcesAndDistributors(){
+    // Load sources
+    var xhr1 = new XMLHttpRequest();
+    xhr1.open('GET', 'https://' + window.location.hostname + '/slider/report/4500?JSON_KV', true);
+    xhr1.onload = function(){
+        if(xhr1.status === 200){
+            try{
+                sourcesData = JSON.parse(xhr1.responseText);
+                populateSourcesDropdown();
+            } catch(e){
+                console.error('Error parsing sources data:', e);
+            }
+        } else {
+            console.error('Error loading sources:', xhr1.status);
+        }
+    };
+    xhr1.onerror = function(){
+        console.error('Network error loading sources');
+    };
+    xhr1.send();
+
+    // Load distributors
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', 'https://' + window.location.hostname + '/slider/report/4506?JSON_KV', true);
+    xhr2.onload = function(){
+        if(xhr2.status === 200){
+            try{
+                distributorsData = JSON.parse(xhr2.responseText);
+                populateDistributorsDropdown();
+            } catch(e){
+                console.error('Error parsing distributors data:', e);
+            }
+        } else {
+            console.error('Error loading distributors:', xhr2.status);
+        }
+    };
+    xhr2.onerror = function(){
+        console.error('Network error loading distributors');
+    };
+    xhr2.send();
+}
+
+function populateSourcesDropdown(){
+    var select = $('#recordSource');
+    select.find('option:not(:first)').remove();
+    sourcesData.forEach(function(source){
+        var option = $('<option></option>');
+        option.val(source['ИсточникID']);
+        option.text(source['Источник']);
+        select.append(option);
+    });
+}
+
+function populateDistributorsDropdown(){
+    var select = $('#recordDistributor');
+    select.find('option:not(:first)').remove();
+    distributorsData.forEach(function(distributor){
+        var option = $('<option></option>');
+        option.val(distributor['ДистрибьюторID']);
+        option.text(distributor['Дистрибьютор']);
+        select.append(option);
+    });
+}
+
+function openAddRecordModal(statusId, statusName){
+    currentStatusId = statusId;
+    currentStatusName = statusName;
+
+    // Reset form
+    $('#addRecordForm')[0].reset();
+    $('#recordStatus').text(statusName);
+
+    // Show/hide fields based on partners parameter
+    if(hasPartnersParam){
+        // Partners mode: show INN and Distributor
+        $('#innGroup').show();
+        $('#distributorGroup').show();
+        $('#phoneGroup').hide();
+        $('#emailGroup').hide();
+        $('#contactGroup').hide();
+        $('#sourceGroup').hide();
+    } else {
+        // Non-partners mode: show Phone, Email, Contact, Source
+        $('#innGroup').hide();
+        $('#distributorGroup').hide();
+        $('#phoneGroup').show();
+        $('#emailGroup').show();
+        $('#contactGroup').show();
+        $('#sourceGroup').show();
+    }
+
+    // Show modal
+    $('#addRecordModal').addClass('active');
+}
+
+function closeAddRecordModal(){
+    $('#addRecordModal').removeClass('active');
+    currentStatusId = null;
+    currentStatusName = null;
+}
+
+function submitAddRecord(){
+    // Get form values
+    var name = $('#recordName').val().trim();
+
+    if(!name){
+        alert('Пожалуйста, заполните название');
+        return;
+    }
+
+    // Disable submit button
+    $('#submitButton').prop('disabled', true).text('Сохранение...');
+
+    // Prepare POST data based on partners parameter
+    var entityId, postData;
+
+    if(hasPartnersParam){
+        // Partners mode
+        entityId = 317;
+        var inn = $('#recordInn').val().trim();
+        var distributorId = $('#recordDistributor').val();
+
+        postData = 't317=' + encodeURIComponent(name) +
+                   '&t3838=' + encodeURIComponent(currentStatusId) +
+                   '&_xsrf=' + xsrf;
+
+        if(inn){
+            postData += '&t493=' + encodeURIComponent(inn);
+        }
+        if(distributorId){
+            postData += '&t323=' + encodeURIComponent(distributorId);
+        }
+    } else {
+        // Non-partners mode
+        entityId = 2789;
+        var phone = $('#recordPhone').val().trim();
+        var email = $('#recordEmail').val().trim();
+        var contact = $('#recordContact').val().trim();
+        var sourceId = $('#recordSource').val();
+
+        postData = 't2789=' + encodeURIComponent(name) +
+                   '&t2795=' + encodeURIComponent(currentStatusId) +
+                   '&_xsrf=' + xsrf;
+
+        if(phone){
+            postData += '&t3705=' + encodeURIComponent(phone);
+        }
+        if(email){
+            postData += '&t3706=' + encodeURIComponent(email);
+        }
+        if(contact){
+            postData += '&t3708=' + encodeURIComponent(contact);
+        }
+        if(sourceId){
+            postData += '&t2792=' + encodeURIComponent(sourceId);
+        }
+    }
+
+    // Submit via POST
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://' + window.location.hostname + '/slider/_m_new/' + entityId + '?JSON&up=1', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function(){
+        $('#submitButton').prop('disabled', false).text('Сохранить');
+        if(xhr.status === 200){
+            try{
+                var response = JSON.parse(xhr.responseText);
+                console.log('Record created:', response);
+                closeAddRecordModal();
+                // Reload kanban to show new record
+                loadKanbanData();
+            } catch(e){
+                console.error('Error parsing response:', e);
+                alert('Запись создана, но возникла ошибка при обработке ответа');
+                closeAddRecordModal();
+                loadKanbanData();
+            }
+        } else {
+            console.error('Error creating record:', xhr.status, xhr.responseText);
+            alert('Ошибка при создании записи: ' + xhr.status);
+        }
+    };
+    xhr.onerror = function(){
+        $('#submitButton').prop('disabled', false).text('Сохранить');
+        console.error('Network error creating record');
+        alert('Ошибка сети при создании записи');
+    };
+    xhr.send(postData);
+}
+
+// Close modal when clicking outside
+$(document).on('click', function(event){
+    if(event.target.id === 'addRecordModal'){
+        closeAddRecordModal();
+    }
+});
+
+// Load data on page load
+$(document).ready(function(){
+    loadKanbanData();
+    loadSourcesAndDistributors();
+});
+</script>
