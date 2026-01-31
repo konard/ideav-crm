@@ -6,8 +6,6 @@
 (function() {
     'use strict';
 
-    const db = window._global_.z;
-
     // Load quick links
     async function loadQuickLinks() {
         const container = document.getElementById('quick-links');
