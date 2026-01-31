@@ -203,7 +203,7 @@
 }
 
 .filter-row td {
-    padding: 5px;
+    padding: 0;
     background: #f8f9fa;
 }
 
@@ -246,7 +246,7 @@
 
 .filter-icon-inside {
     position: absolute;
-    left: 8px;
+    left: 2px;
     cursor: pointer;
     font-size: 14px;
     font-weight: bold;
@@ -266,7 +266,7 @@
 
 .filter-input-with-icon {
     flex: 1;
-    padding: 4px 8px 4px 36px;  /* Extra left padding for icon */
+    padding: 4px 8px 4px 26px;  /* Extra left padding for icon */
     border: 1px solid #dee2e6;
     border-radius: 3px;
     font-size: 14px;
