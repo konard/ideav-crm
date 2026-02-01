@@ -162,7 +162,7 @@
 }
 
 .filter-row td {
-    padding: 0;
+    padding: 0 !important;
     background: #f8f9fa;
 }
 
