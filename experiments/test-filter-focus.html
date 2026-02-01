@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест фокуса фильтра</title>
+    <link rel="stylesheet" href="../assets/css/integram-table.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-info {
+            background: #f0f0f0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .test-info h2 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>Тест: Сохранение фокуса при применении фильтра</h2>
+        <p><strong>Инструкция:</strong></p>
+        <ol>
+            <li>Нажмите кнопку "Фильтры" чтобы показать строку фильтров</li>
+            <li>Кликните в поле фильтра (любая колонка)</li>
+            <li>Начните печатать значение фильтра</li>
+            <li>Сделайте паузу больше 500мс</li>
+            <li>Таблица обновится (применится фильтр)</li>
+            <li><strong>ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:</strong> Фокус остается в поле ввода фильтра, курсор на той же позиции</li>
+        </ol>
+        <p><strong>Текущий статус:</strong> <span id="test-status" style="font-weight: bold; color: green;">✓ Исправление применено</span></p>
+    </div>
+
+    <div id="test-table"></div>
+
+    <script src="../assets/js/integram-table.js"></script>
+    <script>
+        // Mock API endpoint that returns test data
+        const mockApiUrl = 'data:application/json,' + encodeURIComponent(JSON.stringify({
+            "columns": [
+                {
+                    "id": "col1",
+                    "type": "3596",
+                    "format": "CHARS",
+                    "name": "Название",
+                    "granted": 1,
+                    "ref": 0
+                },
+                {
+                    "id": "col2",
+                    "type": "332",
+                    "format": "SHORT",
+                    "name": "Клиент",
+                    "granted": 1,
+                    "ref": 0
+                },
+                {
+                    "id": "col3",
+                    "type": "3942",
+                    "format": "NUMBER",
+                    "name": "ID",
+                    "granted": 1,
+                    "ref": 0
+                },
+                {
+                    "id": "col4",
+                    "type": "3884",
+                    "format": "SHORT",
+                    "name": "Статус",
+                    "granted": 1,
+                    "ref": 1
+                }
+            ],
+            "data": [
+                ["Настройка CRM", "ООО Рога и Копыта", "1001", "В работе"],
+                ["Консультация по интеграции", "ИП Иванов", "1002", "Ожидание"],
+                ["Разработка сайта", "ООО Синтез", "1003", "Завершено"],
+                ["Аудит информационной системы", "АО Электропочта", "1004", "В работе"],
+                ["Интеграция API с 1С", "ООО Технологии", "1005", "Новая"],
+                ["Обучение персонала CRM", "ЗАО Инновация", "1006", "В работе"],
+                ["Миграция данных из старой CRM", "ООО Цифра", "1007", "Ожидание"],
+                ["Тестирование новой версии", "ИП Петров", "1008", "В работе"],
+                ["Настройка отчетов", "ООО Аналитика", "1009", "Новая"],
+                ["Консультация по API", "ИП Сидоров", "1010", "Завершено"]
+            ],
+            "total": 10
+        }));
+
+        // Initialize table
+        const table = new IntegramTable('test-table', {
+            title: 'Табличный компонент - Тест фокуса фильтра',
+            apiUrl: mockApiUrl,
+            pageSize: 50,
+            instanceName: 'testTable'
+        });
+
+        // Make it available globally for debugging
+        window.testTable = table;
+
+        // Add focus monitoring for debugging
+        document.addEventListener('focusin', (e) => {
+            if (e.target.classList.contains('filter-input-with-icon')) {
+                console.log('Focus gained on filter input:', e.target.dataset.columnId);
+            }
+        });
+
+        document.addEventListener('focusout', (e) => {
+            if (e.target.classList.contains('filter-input-with-icon')) {
+                console.log('Focus lost from filter input:', e.target.dataset.columnId);
+            }
+        });
+    </script>
+</body>
+</html>
