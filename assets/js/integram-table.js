@@ -1455,8 +1455,8 @@ class IntegramTable {
                         </svg>
                     </button>
                     <div class="edit-form-footer-buttons">
-                        <button type="button" class="btn btn-secondary" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">Отмена</button>
                         <button type="button" class="btn btn-primary" id="save-record-btn">Сохранить</button>
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">Отмена</button>
                     </div>
                 </div>
             `;
@@ -1668,8 +1668,8 @@ class IntegramTable {
                     </div>
                 </div>
                 <div class="form-field-settings-footer">
-                    <button type="button" class="btn btn-secondary form-field-settings-cancel">Отмена</button>
                     <button type="button" class="btn btn-primary form-field-settings-save">Сохранить</button>
+                    <button type="button" class="btn btn-secondary form-field-settings-cancel">Отмена</button>
                 </div>
             `;
 
