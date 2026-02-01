@@ -300,6 +300,18 @@ class IntegramTable {
         }
 
         render() {
+            // Preserve focus state before re-rendering
+            const focusedElement = document.activeElement;
+            let focusState = null;
+
+            if (focusedElement && focusedElement.classList.contains('filter-input-with-icon')) {
+                focusState = {
+                    columnId: focusedElement.dataset.columnId,
+                    selectionStart: focusedElement.selectionStart,
+                    selectionEnd: focusedElement.selectionEnd
+                };
+            }
+
             const orderedColumns = this.columnOrder
                 .map(id => this.columns.find(c => c.id === id))
                 .filter(c => c && this.visibleColumns.includes(c.id));
@@ -375,6 +387,18 @@ class IntegramTable {
             this.attachScrollListener();
             this.attachStickyScrollbar();
             this.attachColumnResizeHandlers();
+
+            // Restore focus state after re-rendering
+            if (focusState) {
+                const newInput = this.container.querySelector(`.filter-input-with-icon[data-column-id="${focusState.columnId}"]`);
+                if (newInput) {
+                    newInput.focus();
+                    // Restore cursor position
+                    if (focusState.selectionStart !== null && focusState.selectionEnd !== null) {
+                        newInput.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+                    }
+                }
+            }
         }
 
         renderFilterCell(column, columnIndex = 0) {
