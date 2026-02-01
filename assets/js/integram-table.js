@@ -383,6 +383,44 @@ class IntegramTable {
             `;
         }
 
+        // Helper method to parse DD.MM.YYYY date format from API
+        parseDDMMYYYY(dateStr) {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            const parts = dateStr.trim().split('.');
+            if (parts.length !== 3) return null;
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+            // Month is 0-indexed in JavaScript Date
+            return new Date(year, month - 1, day);
+        }
+
+        // Helper method to parse DD.MM.YYYY HH:MM:SS datetime format from API
+        parseDDMMYYYYHHMMSS(datetimeStr) {
+            if (!datetimeStr || typeof datetimeStr !== 'string') return null;
+            const parts = datetimeStr.trim().split(' ');
+            if (parts.length !== 2) return this.parseDDMMYYYY(datetimeStr); // Fallback to date-only
+
+            const dateParts = parts[0].split('.');
+            const timeParts = parts[1].split(':');
+
+            if (dateParts.length !== 3 || timeParts.length !== 3) return null;
+
+            const day = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10);
+            const year = parseInt(dateParts[2], 10);
+            const hour = parseInt(timeParts[0], 10);
+            const minute = parseInt(timeParts[1], 10);
+            const second = parseInt(timeParts[2], 10);
+
+            if (isNaN(day) || isNaN(month) || isNaN(year) ||
+                isNaN(hour) || isNaN(minute) || isNaN(second)) return null;
+
+            // Month is 0-indexed in JavaScript Date
+            return new Date(year, month - 1, day, hour, minute, second);
+        }
+
         renderCell(column, value, rowIndex, colIndex) {
             const format = column.format || 'SHORT';
             let cellClass = '';
@@ -413,13 +451,25 @@ class IntegramTable {
                 case 'DATE':
                     cellClass = 'date-cell';
                     if (value) {
-                        displayValue = new Date(value).toLocaleDateString('ru-RU');
+                        const dateObj = this.parseDDMMYYYY(value);
+                        if (dateObj && !isNaN(dateObj.getTime())) {
+                            displayValue = dateObj.toLocaleDateString('ru-RU');
+                        } else {
+                            // Fallback: show original value if parsing fails
+                            displayValue = value;
+                        }
                     }
                     break;
                 case 'DATETIME':
                     cellClass = 'datetime-cell';
                     if (value) {
-                        displayValue = new Date(value).toLocaleString('ru-RU');
+                        const datetimeObj = this.parseDDMMYYYYHHMMSS(value);
+                        if (datetimeObj && !isNaN(datetimeObj.getTime())) {
+                            displayValue = datetimeObj.toLocaleString('ru-RU');
+                        } else {
+                            // Fallback: show original value if parsing fails
+                            displayValue = value;
+                        }
                     }
                     break;
                 case 'MEMO':
