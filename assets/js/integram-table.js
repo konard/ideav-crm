@@ -1421,26 +1421,10 @@ class IntegramTable {
             modal.className = 'edit-form-modal';
 
             const title = isCreate ? `Создание: ${ metadata.val }` : `Редактирование: ${ metadata.val }`;
+            const instanceName = this.options.instanceName;
+            const recordId = recordData && recordData.obj ? recordData.obj.id : null;
 
-            let formHtml = `
-                <div class="edit-form-header">
-                    <h5>${ title }</h5>
-                    <button class="edit-form-close" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">×</button>
-                </div>
-                <div class="edit-form-body">
-                    <form id="edit-form" class="edit-form">
-            `;
-
-            // Main value field
-            const mainValue = recordData && recordData.obj ? recordData.obj.val : '';
-            formHtml += `
-                <div class="form-group">
-                    <label for="field-main">${ metadata.val } <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="field-main" name="main" value="${ this.escapeHtml(mainValue) }" required>
-                </div>
-            `;
-
-            // Requisite fields
+            // Separate regular fields from subordinate tables
             const reqs = metadata.reqs || [];
             const recordReqs = recordData && recordData.reqs ? recordData.reqs : {};
 
@@ -1451,7 +1435,131 @@ class IntegramTable {
                 return orderA - orderB;
             });
 
-            sortedReqs.forEach(req => {
+            const regularFields = sortedReqs.filter(req => !req.arr_id);
+            const subordinateTables = sortedReqs.filter(req => req.arr_id);
+
+            // Build tabs HTML
+            let tabsHtml = '';
+            let hasSubordinateTables = subordinateTables.length > 0 && !isCreate && recordId;
+
+            if (hasSubordinateTables) {
+                tabsHtml = `<div class="edit-form-tabs">`;
+                tabsHtml += `<div class="edit-form-tab active" data-tab="attributes">Атрибуты</div>`;
+
+                subordinateTables.forEach(req => {
+                    const attrs = this.parseAttrs(req.attrs);
+                    const fieldName = attrs.alias || req.val;
+                    const arrCount = recordReqs[req.id] ? recordReqs[req.id].arr || 0 : 0;
+                    tabsHtml += `<div class="edit-form-tab" data-tab="sub-${ req.id }" data-arr-id="${ req.arr_id }" data-req-id="${ req.id }">${ fieldName } (${ arrCount })</div>`;
+                });
+
+                tabsHtml += `</div>`;
+            }
+
+            // Build attributes form HTML
+            let attributesHtml = this.renderAttributesForm(metadata, recordData, regularFields, recordReqs);
+
+            let formHtml = `
+                <div class="edit-form-header">
+                    <h5>${ title }</h5>
+                    <button class="edit-form-close" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">×</button>
+                </div>
+                ${ tabsHtml }
+                <div class="edit-form-body">
+                    <div class="edit-form-tab-content active" data-tab-content="attributes">
+                        <form id="edit-form" class="edit-form">
+                            ${ attributesHtml }
+                        </form>
+                    </div>
+            `;
+
+            // Add placeholder for subordinate table contents
+            if (hasSubordinateTables) {
+                subordinateTables.forEach(req => {
+                    formHtml += `
+                        <div class="edit-form-tab-content" data-tab-content="sub-${ req.id }">
+                            <div class="subordinate-table-loading">Загрузка...</div>
+                        </div>
+                    `;
+                });
+            }
+
+            formHtml += `
+                </div>
+                <div class="edit-form-footer">
+                    <button type="button" class="btn btn-icon form-settings-btn" id="form-settings-btn" title="Настройка видимости полей">
+                        ⚙️
+                    </button>
+                    <div class="edit-form-footer-buttons">
+                        <button type="button" class="btn btn-primary" id="save-record-btn">Сохранить</button>
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">Отмена</button>
+                    </div>
+                </div>
+            `;
+
+            modal.innerHTML = formHtml;
+            document.body.appendChild(overlay);
+            document.body.appendChild(modal);
+
+            // Store modal context for subordinate tables
+            this.currentEditModal = {
+                modal,
+                recordId,
+                typeId,
+                metadata,
+                recordData,
+                subordinateTables,
+                recordReqs
+            };
+
+            // Attach tab switching handlers
+            if (hasSubordinateTables) {
+                this.attachTabHandlers(modal);
+            }
+
+            // Load reference options for dropdowns
+            this.loadReferenceOptions(metadata.reqs, recordId || 0);
+
+            // Attach date/datetime picker handlers
+            this.attachDatePickerHandlers(modal);
+
+            // Attach form field settings handler
+            const formSettingsBtn = modal.querySelector('#form-settings-btn');
+            formSettingsBtn.addEventListener('click', () => {
+                this.openFormFieldSettings(typeId, metadata);
+            });
+
+            // Apply saved field visibility settings
+            this.applyFormFieldSettings(modal, typeId);
+
+            // Attach save handler
+            const saveBtn = modal.querySelector('#save-record-btn');
+            const parentId = recordData && recordData.obj ? recordData.obj.parent : 1;
+
+            saveBtn.addEventListener('click', () => {
+                this.saveRecord(modal, isCreate, recordId, typeId, parentId);
+            });
+
+            overlay.addEventListener('click', () => {
+                modal.remove();
+                overlay.remove();
+                this.currentEditModal = null;
+            });
+        }
+
+        renderAttributesForm(metadata, recordData, regularFields, recordReqs) {
+            let html = '';
+
+            // Main value field
+            const mainValue = recordData && recordData.obj ? recordData.obj.val : '';
+            html += `
+                <div class="form-group">
+                    <label for="field-main">${ metadata.val } <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="field-main" name="main" value="${ this.escapeHtml(mainValue) }" required>
+                </div>
+            `;
+
+            regularFields.forEach(req => {
                 const attrs = this.parseAttrs(req.attrs);
                 const fieldName = attrs.alias || req.val;
                 const reqValue = recordReqs[req.id] ? recordReqs[req.id].value : '';
@@ -1459,32 +1567,13 @@ class IntegramTable {
                 const baseFormat = this.normalizeFormat(baseTypeId);
                 const isRequired = attrs.required;
 
-                // Skip subordinate table fields (arr_id)
-                if (req.arr_id) {
-                    const arrCount = recordReqs[req.id] ? recordReqs[req.id].arr || 0 : 0;
-                    formHtml += `
-                        <div class="form-group">
-                            <label>${ fieldName }</label>
-                            <div class="subordinate-table-indicator">
-                                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                                    <rect x="2" y="2" width="16" height="3" />
-                                    <rect x="2" y="7" width="16" height="3" />
-                                    <rect x="2" y="12" width="16" height="3" />
-                                </svg>
-                                <span>${ arrCount } записей</span>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                formHtml += `<div class="form-group">`;
-                formHtml += `<label for="field-${ req.id }">${ fieldName }${ isRequired ? ' <span class="required">*</span>' : '' }</label>`;
+                html += `<div class="form-group">`;
+                html += `<label for="field-${ req.id }">${ fieldName }${ isRequired ? ' <span class="required">*</span>' : '' }</label>`;
 
                 // Reference field (searchable dropdown)
                 if (req.ref_id) {
                     const currentValue = reqValue || '';
-                    formHtml += `
+                    html += `
                         <div class="searchable-select-wrapper" data-ref-id="${ req.id }" data-required="${ isRequired }">
                             <input type="text"
                                    class="form-control searchable-select-input"
@@ -1507,30 +1596,323 @@ class IntegramTable {
                 else if (baseFormat === 'BOOLEAN') {
                     const isChecked = reqValue ? 'checked' : '';
                     const prevValue = reqValue || '';
-                    formHtml += `<input type="checkbox" id="field-${ req.id }" name="t${ req.id }" value="1" ${ isChecked }>`;
-                    formHtml += `<input type="hidden" name="b${ req.id }" value="${ this.escapeHtml(prevValue) }">`;
+                    html += `<input type="checkbox" id="field-${ req.id }" name="t${ req.id }" value="1" ${ isChecked }>`;
+                    html += `<input type="hidden" name="b${ req.id }" value="${ this.escapeHtml(prevValue) }">`;
                 }
                 // Date field with HTML5 date picker
                 else if (baseFormat === 'DATE') {
                     const dateValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, false) : '';
                     const dateValueDisplay = reqValue ? this.formatDateForInput(reqValue, false) : '';
-                    formHtml += `<input type="date" class="form-control date-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }">`;
-                    formHtml += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateValueDisplay) }">`;
+                    html += `<input type="date" class="form-control date-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }">`;
+                    html += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateValueDisplay) }">`;
                 }
                 // DateTime field with HTML5 datetime-local picker (with time rounded to 5 minutes)
                 else if (baseFormat === 'DATETIME') {
                     const dateTimeValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, true) : '';
                     const dateTimeValueDisplay = reqValue ? this.formatDateForInput(reqValue, true) : '';
-                    formHtml += `<input type="datetime-local" class="form-control datetime-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateTimeValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }" step="300">`;
-                    formHtml += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateTimeValueDisplay) }">`;
+                    html += `<input type="datetime-local" class="form-control datetime-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateTimeValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }" step="300">`;
+                    html += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateTimeValueDisplay) }">`;
                 }
                 // MEMO field (multi-line text, 4 rows)
                 else if (baseFormat === 'MEMO') {
-                    formHtml += `<textarea class="form-control memo-field" id="field-${ req.id }" name="t${ req.id }" rows="4" ${ isRequired ? 'required' : '' }>${ this.escapeHtml(reqValue) }</textarea>`;
+                    html += `<textarea class="form-control memo-field" id="field-${ req.id }" name="t${ req.id }" rows="4" ${ isRequired ? 'required' : '' }>${ this.escapeHtml(reqValue) }</textarea>`;
                 }
                 // Regular text field
                 else {
-                    formHtml += `<input type="text" class="form-control" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(reqValue) }" ${ isRequired ? 'required' : '' }>`;
+                    html += `<input type="text" class="form-control" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(reqValue) }" ${ isRequired ? 'required' : '' }>`;
+                }
+
+                html += `</div>`;
+            });
+
+            return html;
+        }
+
+        attachTabHandlers(modal) {
+            const tabs = modal.querySelectorAll('.edit-form-tab');
+            const instanceName = this.options.instanceName;
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', async () => {
+                    const tabId = tab.dataset.tab;
+
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    // Update active content
+                    const contents = modal.querySelectorAll('.edit-form-tab-content');
+                    contents.forEach(c => c.classList.remove('active'));
+
+                    const targetContent = modal.querySelector(`[data-tab-content="${ tabId }"]`);
+                    if (targetContent) {
+                        targetContent.classList.add('active');
+                    }
+
+                    // Load subordinate table if needed
+                    if (tabId.startsWith('sub-') && tab.dataset.arrId) {
+                        const arrId = tab.dataset.arrId;
+                        const reqId = tab.dataset.reqId;
+                        const parentRecordId = this.currentEditModal.recordId;
+
+                        // Check if already loaded
+                        if (!targetContent.dataset.loaded) {
+                            await this.loadSubordinateTable(targetContent, arrId, parentRecordId, reqId);
+                            targetContent.dataset.loaded = 'true';
+                        }
+                    }
+
+                    // Show/hide footer buttons based on tab
+                    const footer = modal.querySelector('.edit-form-footer');
+                    if (tabId === 'attributes') {
+                        footer.style.display = 'flex';
+                    } else {
+                        footer.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        async loadSubordinateTable(container, arrId, parentRecordId, reqId) {
+            container.innerHTML = '<div class="subordinate-table-loading">Загрузка...</div>';
+
+            try {
+                // Fetch metadata for subordinate table
+                const metadata = await this.fetchMetadata(arrId);
+
+                // Fetch data for subordinate table
+                const apiBase = this.getApiBase();
+                const dataUrl = `${ apiBase }/object/${ arrId }/?JSON_DATA&F_U=${ parentRecordId }`;
+                const dataResponse = await fetch(dataUrl);
+                const data = await dataResponse.json();
+
+                // Render the subordinate table
+                this.renderSubordinateTable(container, metadata, data, arrId, parentRecordId);
+
+            } catch (error) {
+                console.error('Error loading subordinate table:', error);
+                container.innerHTML = `<div class="subordinate-table-error">Ошибка загрузки: ${ error.message }</div>`;
+            }
+        }
+
+        renderSubordinateTable(container, metadata, data, arrId, parentRecordId) {
+            const instanceName = this.options.instanceName;
+            const rows = Array.isArray(data) ? data : [];
+
+            let html = `
+                <div class="subordinate-table-toolbar">
+                    <button type="button" class="btn btn-sm btn-primary subordinate-add-btn" data-arr-id="${ arrId }" data-parent-id="${ parentRecordId }">
+                        + Добавить
+                    </button>
+                </div>
+            `;
+
+            if (rows.length === 0) {
+                html += `<div class="subordinate-table-empty">Нет записей</div>`;
+            } else {
+                const reqs = metadata.reqs || [];
+
+                html += `<div class="subordinate-table-wrapper"><table class="subordinate-table"><thead><tr>`;
+
+                // Header: main value column + requisite columns
+                html += `<th>${ metadata.val }</th>`;
+                reqs.forEach(req => {
+                    const attrs = this.parseAttrs(req.attrs);
+                    const fieldName = attrs.alias || req.val;
+                    html += `<th>${ fieldName }</th>`;
+                });
+
+                html += `</tr></thead><tbody>`;
+
+                // Data rows
+                rows.forEach(row => {
+                    const rowId = row.i;
+                    const values = row.r || [];
+
+                    html += `<tr data-row-id="${ rowId }">`;
+
+                    // First column (main value) - clickable to edit
+                    const mainValue = values[0] || '';
+                    const displayMainValue = this.formatSubordinateCellValue(mainValue, null);
+                    html += `<td class="subordinate-cell-clickable" data-row-id="${ rowId }" data-type-id="${ arrId }">${ displayMainValue }</td>`;
+
+                    // Other columns
+                    reqs.forEach((req, idx) => {
+                        // values[0] is main value, requisites start from index 1
+                        const cellValue = values[idx + 1] !== undefined ? values[idx + 1] : '';
+
+                        // Check if this requisite has subordinate tables (arr_id)
+                        if (req.arr_id) {
+                            // Show just the count in parentheses
+                            const count = typeof cellValue === 'number' ? cellValue : (cellValue || 0);
+                            html += `<td class="subordinate-nested-count">(${ count })</td>`;
+                        } else {
+                            const displayValue = this.formatSubordinateCellValue(cellValue, req);
+                            html += `<td>${ displayValue }</td>`;
+                        }
+                    });
+
+                    html += `</tr>`;
+                });
+
+                html += `</tbody></table></div>`;
+            }
+
+            container.innerHTML = html;
+
+            // Attach click handlers for editing rows
+            const clickableCells = container.querySelectorAll('.subordinate-cell-clickable');
+            clickableCells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const rowId = cell.dataset.rowId;
+                    const typeId = cell.dataset.typeId;
+                    this.openEditForm(rowId, typeId, 0);
+                });
+            });
+
+            // Attach add button handler
+            const addBtn = container.querySelector('.subordinate-add-btn');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    this.createSubordinateRecord(arrId, parentRecordId);
+                });
+            }
+        }
+
+        formatSubordinateCellValue(value, req) {
+            if (value === null || value === undefined || value === '') {
+                return '';
+            }
+
+            // Handle reference values (format: "id:label")
+            if (typeof value === 'string' && value.includes(':')) {
+                const parts = value.split(':');
+                if (parts.length >= 2 && !isNaN(parseInt(parts[0]))) {
+                    // It's a reference value, show the label
+                    return this.escapeHtml(parts.slice(1).join(':'));
+                }
+            }
+
+            // Format based on type if req is provided
+            if (req) {
+                const baseFormat = this.normalizeFormat(req.type);
+
+                switch (baseFormat) {
+                    case 'BOOLEAN':
+                        return value ? 'Да' : 'Нет';
+                    case 'DATE':
+                        if (value) {
+                            const dateObj = this.parseDDMMYYYY(value);
+                            if (dateObj && !isNaN(dateObj.getTime())) {
+                                return dateObj.toLocaleDateString('ru-RU');
+                            }
+                        }
+                        break;
+                    case 'DATETIME':
+                        if (value) {
+                            const datetimeObj = this.parseDDMMYYYYHHMMSS(value);
+                            if (datetimeObj && !isNaN(datetimeObj.getTime())) {
+                                return datetimeObj.toLocaleString('ru-RU');
+                            }
+                        }
+                        break;
+                }
+            }
+
+            return this.escapeHtml(String(value));
+        }
+
+        async createSubordinateRecord(arrId, parentRecordId) {
+            try {
+                // Fetch metadata for the subordinate table type
+                if (!this.metadataCache[arrId]) {
+                    this.metadataCache[arrId] = await this.fetchMetadata(arrId);
+                }
+
+                const metadata = this.metadataCache[arrId];
+
+                // Open create form with parent ID
+                this.renderSubordinateCreateForm(metadata, arrId, parentRecordId);
+
+            } catch (error) {
+                console.error('Error creating subordinate record:', error);
+                this.showToast(`Ошибка: ${ error.message }`, 'error');
+            }
+        }
+
+        renderSubordinateCreateForm(metadata, arrId, parentRecordId) {
+            // Create a new form modal for subordinate record
+            const overlay = document.createElement('div');
+            overlay.className = 'edit-form-overlay subordinate-form-overlay';
+
+            const modal = document.createElement('div');
+            modal.className = 'edit-form-modal subordinate-form-modal';
+
+            const title = `Создание: ${ metadata.val }`;
+
+            // Build form for regular fields only (no nested subordinate tables in create mode)
+            const reqs = metadata.reqs || [];
+            const regularFields = reqs.filter(req => !req.arr_id);
+
+            let formHtml = `
+                <div class="edit-form-header">
+                    <h5>${ title }</h5>
+                    <button class="edit-form-close subordinate-close-btn">×</button>
+                </div>
+                <div class="edit-form-body">
+                    <form id="subordinate-edit-form" class="edit-form">
+                        <div class="form-group">
+                            <label for="sub-field-main">${ metadata.val } <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="sub-field-main" name="main" value="" required>
+                        </div>
+            `;
+
+            regularFields.forEach(req => {
+                const attrs = this.parseAttrs(req.attrs);
+                const fieldName = attrs.alias || req.val;
+                const baseFormat = this.normalizeFormat(req.type);
+                const isRequired = attrs.required;
+
+                formHtml += `<div class="form-group">`;
+                formHtml += `<label for="sub-field-${ req.id }">${ fieldName }${ isRequired ? ' <span class="required">*</span>' : '' }</label>`;
+
+                // Reference field
+                if (req.ref_id) {
+                    formHtml += `
+                        <div class="searchable-select-wrapper" data-ref-id="${ req.id }" data-required="${ isRequired }">
+                            <input type="text"
+                                   class="form-control searchable-select-input"
+                                   id="sub-field-${ req.id }-search"
+                                   placeholder="Начните вводить для поиска..."
+                                   autocomplete="off">
+                            <div class="searchable-select-dropdown" id="sub-field-${ req.id }-dropdown">
+                                <div class="searchable-select-loading">Загрузка...</div>
+                            </div>
+                            <input type="hidden"
+                                   class="searchable-select-value"
+                                   id="sub-field-${ req.id }"
+                                   name="t${ req.id }"
+                                   value=""
+                                   data-ref-id="${ req.id }">
+                        </div>
+                    `;
+                }
+                else if (baseFormat === 'BOOLEAN') {
+                    formHtml += `<input type="checkbox" id="sub-field-${ req.id }" name="t${ req.id }" value="1">`;
+                }
+                else if (baseFormat === 'DATE') {
+                    formHtml += `<input type="date" class="form-control date-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }">`;
+                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="">`;
+                }
+                else if (baseFormat === 'DATETIME') {
+                    formHtml += `<input type="datetime-local" class="form-control datetime-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }" step="300">`;
+                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="">`;
+                }
+                else if (baseFormat === 'MEMO') {
+                    formHtml += `<textarea class="form-control memo-field" id="sub-field-${ req.id }" name="t${ req.id }" rows="4" ${ isRequired ? 'required' : '' }></textarea>`;
+                }
+                else {
+                    formHtml += `<input type="text" class="form-control" id="sub-field-${ req.id }" name="t${ req.id }" value="" ${ isRequired ? 'required' : '' }>`;
                 }
 
                 formHtml += `</div>`;
@@ -1540,12 +1922,9 @@ class IntegramTable {
                     </form>
                 </div>
                 <div class="edit-form-footer">
-                    <button type="button" class="btn btn-icon form-settings-btn" id="form-settings-btn" title="Настройка видимости полей">
-                        ⚙️
-                    </button>
                     <div class="edit-form-footer-buttons">
-                        <button type="button" class="btn btn-primary" id="save-record-btn">Сохранить</button>
-                        <button type="button" class="btn btn-secondary" onclick="this.closest('.edit-form-modal').remove(); document.querySelector('.edit-form-overlay').remove();">Отмена</button>
+                        <button type="button" class="btn btn-primary" id="subordinate-save-btn">Создать</button>
+                        <button type="button" class="btn btn-secondary subordinate-cancel-btn">Отмена</button>
                     </div>
                 </div>
             `;
@@ -1554,33 +1933,89 @@ class IntegramTable {
             document.body.appendChild(overlay);
             document.body.appendChild(modal);
 
-            // Load reference options for dropdowns
-            this.loadReferenceOptions(metadata.reqs, recordData ? recordData.obj.id : 0);
+            // Load reference options
+            this.loadReferenceOptions(regularFields, 0);
 
-            // Attach date/datetime picker handlers
+            // Attach date picker handlers
             this.attachDatePickerHandlers(modal);
 
-            // Attach form field settings handler
-            const formSettingsBtn = modal.querySelector('#form-settings-btn');
-            formSettingsBtn.addEventListener('click', () => {
-                this.openFormFieldSettings(typeId, metadata);
-            });
-
-            // Apply saved field visibility settings
-            this.applyFormFieldSettings(modal, typeId);
-
-            // Attach save handler
-            const saveBtn = modal.querySelector('#save-record-btn');
-            const recordId = recordData && recordData.obj ? recordData.obj.id : null;
-            const parentId = recordData && recordData.obj ? recordData.obj.parent : 1;
-
-            saveBtn.addEventListener('click', () => {
-                this.saveRecord(modal, isCreate, recordId, typeId, parentId);
-            });
-
-            overlay.addEventListener('click', () => {
+            // Close handlers
+            const closeModal = () => {
                 modal.remove();
                 overlay.remove();
+            };
+
+            modal.querySelector('.subordinate-close-btn').addEventListener('click', closeModal);
+            modal.querySelector('.subordinate-cancel-btn').addEventListener('click', closeModal);
+            overlay.addEventListener('click', closeModal);
+
+            // Save handler
+            modal.querySelector('#subordinate-save-btn').addEventListener('click', async () => {
+                const form = modal.querySelector('#subordinate-edit-form');
+
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+
+                if (typeof xsrf !== 'undefined') {
+                    params.append('_xsrf', xsrf);
+                }
+
+                for (const [key, value] of formData.entries()) {
+                    params.append(key, value);
+                }
+
+                const mainValue = formData.get('main');
+                params.append('t0', mainValue);
+
+                const apiBase = this.getApiBase();
+                const url = `${ apiBase }/_m_new/${ arrId }?JSON&up=${ parentRecordId }`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params.toString()
+                    });
+
+                    const result = await response.json();
+
+                    if (result.error) {
+                        throw new Error(result.error);
+                    }
+
+                    closeModal();
+                    this.showToast('Запись создана', 'success');
+
+                    // Reload the subordinate table
+                    if (this.currentEditModal) {
+                        const tabContent = this.currentEditModal.modal.querySelector(`[data-tab-content="sub-${ this.currentEditModal.subordinateTables.find(t => t.arr_id === arrId)?.id }"]`);
+                        if (tabContent) {
+                            tabContent.dataset.loaded = '';
+                            await this.loadSubordinateTable(tabContent, arrId, parentRecordId);
+                            tabContent.dataset.loaded = 'true';
+
+                            // Update tab count
+                            const tab = this.currentEditModal.modal.querySelector(`[data-arr-id="${ arrId }"]`);
+                            if (tab) {
+                                const currentText = tab.textContent;
+                                const match = currentText.match(/^(.+)\s*\((\d+)\)$/);
+                                if (match) {
+                                    const newCount = parseInt(match[2]) + 1;
+                                    tab.textContent = `${ match[1] } (${ newCount })`;
+                                }
+                            }
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Error creating subordinate record:', error);
+                    this.showToast(`Ошибка: ${ error.message }`, 'error');
+                }
             });
         }
 
