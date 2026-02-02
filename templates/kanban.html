@@ -1726,6 +1726,14 @@ function submitAddRecord(){
             try{
                 var response = JSON.parse(xhr.responseText);
                 console.log('Record created:', response);
+
+                // Check for warning in response - show it and stay in edit mode
+                if(response.warning && response.warning !== ''){
+                    alert('Предупреждение: ' + response.warning);
+                    // Don't close modal, stay in edit mode
+                    return;
+                }
+
                 closeAddRecordModal();
                 // Reload kanban to show new record
                 loadKanbanData();
