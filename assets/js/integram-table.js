@@ -463,6 +463,27 @@ class IntegramTable {
             return new Date(year, month - 1, day, hour, minute, second);
         }
 
+        // Format Date object for display as DD.MM.YYYY
+        formatDateDisplay(dateObj) {
+            if (!dateObj || isNaN(dateObj.getTime())) return '';
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            return `${ day }.${ month }.${ year }`;
+        }
+
+        // Format Date object for display as DD.MM.YYYY hh:mm:ss
+        formatDateTimeDisplay(dateObj) {
+            if (!dateObj || isNaN(dateObj.getTime())) return '';
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            const hours = String(dateObj.getHours()).padStart(2, '0');
+            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+            const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+            return `${ day }.${ month }.${ year } ${ hours }:${ minutes }:${ seconds }`;
+        }
+
         renderCell(column, value, rowIndex, colIndex) {
             const format = column.format || 'SHORT';
             let cellClass = '';
@@ -501,7 +522,7 @@ class IntegramTable {
                     if (value) {
                         const dateObj = this.parseDDMMYYYY(value);
                         if (dateObj && !isNaN(dateObj.getTime())) {
-                            displayValue = dateObj.toLocaleDateString('ru-RU');
+                            displayValue = this.formatDateDisplay(dateObj);
                         } else {
                             // Fallback: show original value if parsing fails
                             displayValue = value;
@@ -513,7 +534,7 @@ class IntegramTable {
                     if (value) {
                         const datetimeObj = this.parseDDMMYYYYHHMMSS(value);
                         if (datetimeObj && !isNaN(datetimeObj.getTime())) {
-                            displayValue = datetimeObj.toLocaleString('ru-RU');
+                            displayValue = this.formatDateTimeDisplay(datetimeObj);
                         } else {
                             // Fallback: show original value if parsing fails
                             displayValue = value;
@@ -1856,7 +1877,7 @@ class IntegramTable {
                         if (value) {
                             const dateObj = this.parseDDMMYYYY(value);
                             if (dateObj && !isNaN(dateObj.getTime())) {
-                                return dateObj.toLocaleDateString('ru-RU');
+                                return this.formatDateDisplay(dateObj);
                             }
                         }
                         break;
@@ -1864,7 +1885,7 @@ class IntegramTable {
                         if (value) {
                             const datetimeObj = this.parseDDMMYYYYHHMMSS(value);
                             if (datetimeObj && !isNaN(datetimeObj.getTime())) {
-                                return datetimeObj.toLocaleString('ru-RU');
+                                return this.formatDateTimeDisplay(datetimeObj);
                             }
                         }
                         break;
