@@ -28,8 +28,21 @@
 ## Файлы компонента
 
 - `assets/js/integram-table.js` - standalone JS модуль (класс IntegramTable)
+- `assets/css/integram-table.css` - стили компонента в Material Design
 - `templates/integram-table.html` - legacy HTML версия (deprecated)
 - `templates/table-example.html` - пример использования с демо-данными и документацией
+
+## Дизайн
+
+Компонент использует **Material Design** - систему визуального дизайна от Google. Основные особенности:
+
+- 🎨 **Material Design 2** - современный, чистый интерфейс
+- 🔤 **Roboto font** - официальный шрифт Material Design
+- 🎭 **Elevation (тени)** - многоуровневые тени для глубины интерфейса
+- 🌊 **Плавные переходы** - cubic-bezier(0.4, 0, 0.2, 1) для естественной анимации
+- 🎯 **8dp сетка** - согласованные отступы и размеры
+- 🔵 **Цветовая палитра** - основной цвет #1976d2 (синий) с правильными оттенками
+- ⚡ **Интерактивность** - hover и active состояния для всех элементов
 
 ## Быстрый старт
 
@@ -42,7 +55,7 @@
 <html>
 <head>
     <link rel="stylesheet" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/info.css">
+    <link rel="stylesheet" href="/assets/css/integram-table.css">
 </head>
 <body>
     <div id="my-table"
@@ -53,7 +66,7 @@
          data-title="Мои задачи"
          data-instance-name="myTable"></div>
 
-    <script src="/js/integram-table.js"></script>
+    <script src="/assets/js/integram-table.js"></script>
     <!-- Таблица инициализируется автоматически! -->
 </body>
 </html>
@@ -74,12 +87,12 @@
 <html>
 <head>
     <link rel="stylesheet" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/info.css">
+    <link rel="stylesheet" href="/assets/css/integram-table.css">
 </head>
 <body>
     <div id="my-table"></div>
 
-    <script src="/js/integram-table.js"></script>
+    <script src="/assets/js/integram-table.js"></script>
     <script>
         const myTable = new IntegramTable('my-table', {
             apiUrl: '/api/tasks',

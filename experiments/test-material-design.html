@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Design Table Test</title>
+    <link rel="stylesheet" href="../assets/css/integram-table.css">
+    <style>
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: rgba(0, 0, 0, 0.87);
+            font-weight: 500;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Material Design Table Component Test</h1>
+        <div id="table-container"></div>
+    </div>
+
+    <script src="../assets/js/integram-table.js"></script>
+    <script>
+        // Mock data for testing
+        const mockData = {
+            columns: [
+                { id: 'id', name: 'ID', format: 'NUMBER' },
+                { id: 'name', name: 'Название', format: 'CHARS' },
+                { id: 'status', name: 'Статус', format: 'SHORT' },
+                { id: 'date', name: 'Дата', format: 'DATE' },
+                { id: 'amount', name: 'Сумма', format: 'NUMBER' }
+            ],
+            data: [
+                [1, 'Проект А', 'Активный', '01.02.2026', 150000],
+                [2, 'Проект Б', 'В работе', '15.01.2026', 250000],
+                [3, 'Проект В', 'Завершен', '20.12.2025', 180000],
+                [4, 'Проект Г', 'Активный', '05.02.2026', 320000],
+                [5, 'Проект Д', 'В работе', '28.01.2026', 95000]
+            ],
+            total: 5
+        };
+
+        // Create mock API
+        window.mockAPI = function(url) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        json: () => Promise.resolve(mockData)
+                    });
+                }, 100);
+            });
+        };
+
+        // Override fetch for testing
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url.includes('/api/')) {
+                return window.mockAPI(url);
+            }
+            return originalFetch(url, options);
+        };
+
+        // Initialize table
+        const table = new IntegramTable('table-container', {
+            apiUrl: '/api/test',
+            pageSize: 20,
+            cookiePrefix: 'test-table',
+            title: 'Тестовая таблица',
+            instanceName: 'testTable'
+        });
+    </script>
+</body>
+</html>
