@@ -302,7 +302,7 @@
 
 .filter-icon-inside {
     position: absolute;
-    left: 8px;
+    left: 2px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -311,8 +311,8 @@
     padding: 0;
     border-radius: 4px;
     z-index: 1;
-    /* min-width: 24px;
-    text-align: center; */
+    min-width: 16px;
+    text-align: center;
     transition: var(--md-transition);
 }
 
