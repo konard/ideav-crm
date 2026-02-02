@@ -924,6 +924,7 @@
 // Kanban functionality
 var kanbanData = [];
 var statusesData = [];
+var editFormStatusesData = []; // Statuses for edit form (all statuses, unfiltered)
 var sourcesData = [];
 var distributorsData = [];
 var partnersData = [];
@@ -1771,7 +1772,24 @@ $(document).ready(function(){
     loadProductsList();
     loadManagersList();
     loadTaskTypesList();
+    loadEditFormStatuses();
 });
+
+// Load all statuses for edit form (unfiltered)
+function loadEditFormStatuses(){
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://' + window.location.hostname + '/' + db + '/report/3796?JSON_KV&FR_partners=%25', true);
+    xhr.onload = function(){
+        if(xhr.status === 200){
+            try{
+                editFormStatusesData = JSON.parse(xhr.responseText);
+            } catch(e){
+                console.error('Error parsing edit form statuses:', e);
+            }
+        }
+    };
+    xhr.send();
+}
 
 // Client edit modal functionality
 var currentEditClientId = null;
@@ -1825,14 +1843,14 @@ function renderClientEditForm(data){
     html += '<input type="text" class="kanban-edit-form-input" id="editClientName" name="t0" value="' + escapeHtml(obj.val || '') + '">';
     html += '</div>';
 
-    // Status field (from requisites)
+    // Status field (from requisites) - use editFormStatusesData (all statuses, unfiltered)
     if(reqs['4874']){
         html += '<div class="kanban-edit-form-group">';
         html += '<label class="kanban-edit-form-label">Статус</label>';
         html += '<select class="kanban-edit-form-select" id="editClientStatus" name="t4874">';
         html += '<option value="">Выберите статус</option>';
         var statusValue = getReqValue(reqs, '4874');
-        statusesData.forEach(function(status){
+        editFormStatusesData.forEach(function(status){
             var selected = statusValue == status['СтатусID'] ? 'selected' : '';
             html += '<option value="' + escapeHtml(status['СтатусID'] || '') + '" ' + selected + '>' + escapeHtml(status['Статус'] || '') + '</option>';
         });
