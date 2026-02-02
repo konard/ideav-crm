@@ -1473,7 +1473,7 @@ class IntegramTable {
             }
 
             // Build attributes form HTML
-            let attributesHtml = this.renderAttributesForm(metadata, recordData, regularFields, recordReqs, isCreate);
+            let attributesHtml = this.renderAttributesForm(metadata, recordData, regularFields, recordReqs, isCreate, typeId);
 
             let formHtml = `
                 <div class="edit-form-header">
@@ -1574,10 +1574,11 @@ class IntegramTable {
             overlay.addEventListener('click', closeModal);
         }
 
-        renderAttributesForm(metadata, recordData, regularFields, recordReqs, isCreate = false) {
+        renderAttributesForm(metadata, recordData, regularFields, recordReqs, isCreate = false, typeId = null) {
             let html = '';
 
             // Get current date/datetime for default values in create mode
+            // Only applied to the first column (where req.id equals typeId)
             let currentDateHtml5 = '';
             let currentDateTimeHtml5 = '';
             let currentDateDisplay = '';
@@ -1644,15 +1645,19 @@ class IntegramTable {
                 }
                 // Date field with HTML5 date picker
                 else if (baseFormat === 'DATE') {
-                    const dateValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, false) : (isCreate ? currentDateHtml5 : '');
-                    const dateValueDisplay = reqValue ? this.formatDateForInput(reqValue, false) : (isCreate ? currentDateDisplay : '');
+                    // Only apply default value for the first column (where req.id equals typeId)
+                    const isFirstColumn = typeId && String(req.id) === String(typeId);
+                    const dateValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, false) : (isCreate && isFirstColumn ? currentDateHtml5 : '');
+                    const dateValueDisplay = reqValue ? this.formatDateForInput(reqValue, false) : (isCreate && isFirstColumn ? currentDateDisplay : '');
                     html += `<input type="date" class="form-control date-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }">`;
                     html += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateValueDisplay) }">`;
                 }
                 // DateTime field with HTML5 datetime-local picker (with time rounded to 5 minutes)
                 else if (baseFormat === 'DATETIME') {
-                    const dateTimeValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, true) : (isCreate ? currentDateTimeHtml5 : '');
-                    const dateTimeValueDisplay = reqValue ? this.formatDateForInput(reqValue, true) : (isCreate ? currentDateTimeDisplay : '');
+                    // Only apply default value for the first column (where req.id equals typeId)
+                    const isFirstColumn = typeId && String(req.id) === String(typeId);
+                    const dateTimeValueHtml5 = reqValue ? this.formatDateForHtml5(reqValue, true) : (isCreate && isFirstColumn ? currentDateTimeHtml5 : '');
+                    const dateTimeValueDisplay = reqValue ? this.formatDateForInput(reqValue, true) : (isCreate && isFirstColumn ? currentDateTimeDisplay : '');
                     html += `<input type="datetime-local" class="form-control datetime-picker" id="field-${ req.id }-picker" value="${ this.escapeHtml(dateTimeValueHtml5) }" ${ isRequired ? 'required' : '' } data-target="field-${ req.id }" step="300">`;
                     html += `<input type="hidden" id="field-${ req.id }" name="t${ req.id }" value="${ this.escapeHtml(dateTimeValueDisplay) }">`;
                 }
@@ -1991,12 +1996,20 @@ class IntegramTable {
                     formHtml += `<input type="checkbox" id="sub-field-${ req.id }" name="t${ req.id }" value="1">`;
                 }
                 else if (baseFormat === 'DATE') {
-                    formHtml += `<input type="date" class="form-control date-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }" value="${ currentDateHtml5 }">`;
-                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="${ currentDateDisplay }">`;
+                    // Only apply default value for the first column (where req.id equals arrId)
+                    const isFirstColumn = String(req.id) === String(arrId);
+                    const dateValue = isFirstColumn ? currentDateHtml5 : '';
+                    const dateDisplay = isFirstColumn ? currentDateDisplay : '';
+                    formHtml += `<input type="date" class="form-control date-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }" value="${ dateValue }">`;
+                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="${ dateDisplay }">`;
                 }
                 else if (baseFormat === 'DATETIME') {
-                    formHtml += `<input type="datetime-local" class="form-control datetime-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }" step="300" value="${ currentDateTimeHtml5 }">`;
-                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="${ currentDateTimeDisplay }">`;
+                    // Only apply default value for the first column (where req.id equals arrId)
+                    const isFirstColumn = String(req.id) === String(arrId);
+                    const dateTimeValue = isFirstColumn ? currentDateTimeHtml5 : '';
+                    const dateTimeDisplay = isFirstColumn ? currentDateTimeDisplay : '';
+                    formHtml += `<input type="datetime-local" class="form-control datetime-picker" id="sub-field-${ req.id }-picker" ${ isRequired ? 'required' : '' } data-target="sub-field-${ req.id }" step="300" value="${ dateTimeValue }">`;
+                    formHtml += `<input type="hidden" id="sub-field-${ req.id }" name="t${ req.id }" value="${ dateTimeDisplay }">`;
                 }
                 else if (baseFormat === 'MEMO') {
                     formHtml += `<textarea class="form-control memo-field" id="sub-field-${ req.id }" name="t${ req.id }" rows="4" ${ isRequired ? 'required' : '' }></textarea>`;
