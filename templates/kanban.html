@@ -2034,8 +2034,8 @@ function renderTaskCreateForm(){
 
     // Due date field
     html += '<div class="kanban-edit-form-group">';
-    html += '<label class="kanban-edit-form-label">Срок выполнения</label>';
-    html += '<input type="datetime-local" class="kanban-edit-form-input" id="taskDueDate" name="taskDueDatePicker">';
+    html += '<label class="kanban-edit-form-label required">Срок выполнения</label>';
+    html += '<input type="datetime-local" class="kanban-edit-form-input" id="taskDueDate" name="taskDueDatePicker" required>';
     html += '<input type="hidden" id="taskDueDateHidden" name="t4543">';
     html += '</div>';
 
@@ -2071,6 +2071,13 @@ function submitCreateTask(){
         return;
     }
 
+    var dueDate = $('#taskDueDateHidden').val();
+    if(!dueDate){
+        $('#taskDueDate').addClass('error');
+        alert('Срок выполнения обязателен для заполнения');
+        return;
+    }
+
     $('#createTaskSubmitButton').prop('disabled', true).text('Создание...');
 
     // Build POST data
@@ -2094,10 +2101,8 @@ function submitCreateTask(){
         postData += '&t4299=' + encodeURIComponent(taskType);
     }
 
-    var dueDate = $('#taskDueDateHidden').val();
-    if(dueDate){
-        postData += '&t4543=' + encodeURIComponent(dueDate);
-    }
+    // dueDate already validated above
+    postData += '&t4543=' + encodeURIComponent(dueDate);
 
     postData += '&_xsrf=' + xsrf;
 
