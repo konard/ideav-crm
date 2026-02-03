@@ -2253,7 +2253,7 @@ function renderTaskCreateForm(){
     html += '<div class="kanban-edit-form-group">';
     html += '<label class="kanban-edit-form-label required">Срок выполнения</label>';
     html += '<input type="datetime-local" class="kanban-edit-form-input" id="taskDueDate" name="taskDueDatePicker" required>';
-    html += '<input type="hidden" id="taskDueDateHidden" name="t4543">';
+    html += '<input type="hidden" id="taskDueDateHidden" name="t3888">';
     html += '</div>';
 
     html += '</form>';
@@ -2336,7 +2336,7 @@ function submitCreateTask(){
     }
 
     // dueDate already validated above
-    postData += '&t4543=' + encodeURIComponent(dueDate);
+    postData += '&t3888=' + encodeURIComponent(dueDate);
 
     postData += '&_xsrf=' + xsrf;
 
