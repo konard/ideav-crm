@@ -904,14 +904,12 @@
         <input type="text" id="quickSearch" class="kanban-search-input" placeholder="Быстрый поиск" oninput="performQuickSearch()">
     </div>
     <div class="kanban-control-group">
-        <span class="kanban-control-label">Тип:</span>
         <div class="kanban-toggle">
             <button class="kanban-toggle-option" id="toggleSales" onclick="setFilterType('sales')">Продажи</button>
             <button class="kanban-toggle-option" id="togglePartners" onclick="setFilterType('partners')">Партнеры</button>
         </div>
     </div>
     <div class="kanban-control-group">
-        <span class="kanban-control-label">Менеджер:</span>
         <select id="managerSelect" class="kanban-select" onchange="onManagerChange()">
             <!-- Will be populated dynamically -->
         </select>
