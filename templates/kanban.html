@@ -340,7 +340,7 @@
     .kanban-card-tasks-row {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
         margin-top: 8px;
     }
 
@@ -1383,11 +1383,11 @@ function renderCard(task){
     html += '<div class="kanban-card-tasks-row">';
     if(tasksCount > 0 && tasksUrl){
         html += '<a href="' + tasksUrl + '" target="tasks" class="kanban-card-tasks-button ' + buttonClass + '" data-lead-id="' + task['ЛидID'] + '" onclick="event.stopPropagation();">';
-        html += 'Задачи (<span class="tasks-count">' + tasksCount + '</span>)';
+        html += 'Задачи: <span class="tasks-count">' + tasksCount + '</span>';
         html += '</a>';
     } else {
         html += '<span class="kanban-card-tasks-button ' + buttonClass + '" data-lead-id="' + task['ЛидID'] + '">';
-        html += 'Задачи (<span class="tasks-count">' + tasksCount + '</span>)';
+        html += 'Задачи: <span class="tasks-count">' + tasksCount + '</span>';
         html += '</span>';
     }
     html += '<button class="kanban-add-task-button" onclick="openTaskCreateForm(\'' + task['ЛидID'] + '\', this); event.stopPropagation();" title="Добавить задачу">+</button>';
