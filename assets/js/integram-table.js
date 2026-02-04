@@ -717,8 +717,20 @@ class IntegramTable {
             // Attach inline editing handlers
             this.container.querySelectorAll('td[data-editable="true"]').forEach(td => {
                 td.addEventListener('click', (e) => {
+                    console.log('[TRACE] Cell clicked:', {
+                        target: e.target,
+                        isEditIcon: !!e.target.closest('.edit-icon'),
+                        alreadyEditing: !!this.currentEditingCell,
+                        cellData: {
+                            recordId: td.dataset.recordId,
+                            colId: td.dataset.colId,
+                            colType: td.dataset.colType,
+                            editable: td.dataset.editable
+                        }
+                    });
                     // Don't trigger if clicking on edit icon or already editing
                     if (e.target.closest('.edit-icon') || this.currentEditingCell) {
+                        console.log('[TRACE] Click ignored - edit icon or already editing');
                         return;
                     }
                     this.startInlineEdit(td);
@@ -727,19 +739,26 @@ class IntegramTable {
         }
 
         async startInlineEdit(cell) {
+            console.log('[TRACE] startInlineEdit called');
             // Check if we can edit this cell (need to determine parent ID)
             const recordId = cell.dataset.recordId;
             const colId = cell.dataset.colId;
             const colType = cell.dataset.colType;
             const format = cell.dataset.colFormat;
 
+            console.log('[TRACE] Cell data:', { recordId, colId, colType, format });
+
             if (!recordId || !colId || !colType) {
+                console.log('[TRACE] Missing required data - cannot edit');
                 return;
             }
 
             // Determine if this is first column or requisite
+            console.log('[TRACE] Determining parent record...');
             const parentInfo = await this.determineParentRecord(colId, colType);
+            console.log('[TRACE] Parent info result:', parentInfo);
             if (!parentInfo) {
+                console.log('[TRACE] Failed to determine parent record');
                 this.showToast('Не удалось определить родительскую запись', 'error');
                 return;
             }
@@ -770,14 +789,19 @@ class IntegramTable {
         }
 
         async determineParentRecord(colId, colType) {
+            console.log('[TRACE] determineParentRecord - colId:', colId, 'colType:', colType);
             // Use global metadata to determine parent record
             if (!this.globalMetadata) {
+                console.log('[TRACE] No global metadata available');
                 return null;
             }
+
+            console.log('[TRACE] Global metadata:', this.globalMetadata);
 
             // Check if colType is among the top-level metadata IDs (first column)
             const metaItem = this.globalMetadata.find(item => item.id === colType);
             if (metaItem) {
+                console.log('[TRACE] Found as first column in metadata');
                 // This is a first column - parent ID is in the same column
                 return {
                     isFirstColumn: true,
@@ -791,6 +815,7 @@ class IntegramTable {
                 if (item.reqs) {
                     const req = item.reqs.find(r => r.id === colType);
                     if (req) {
+                        console.log('[TRACE] Found as requisite in metadata, parent:', item.id);
                         // This is a requisite - need to find parent ID column
                         const parentColumnId = item.id;
                         return {
@@ -802,6 +827,7 @@ class IntegramTable {
                 }
             }
 
+            console.log('[TRACE] Not found in metadata');
             return null;
         }
 
@@ -928,13 +954,28 @@ class IntegramTable {
                 }
 
                 // Determine parent record ID from the current row data
+                // According to the issue: parent record ID is a number found in a column whose name ends with "ID"
                 const rowIndex = parseInt(cell.dataset.row);
-                const parentColIndex = this.columns.findIndex(c => c.id === parentInfo.parentColumnId);
-                const parentRecordId = parentColIndex !== -1 && this.data[rowIndex] ? this.data[rowIndex][parentColIndex] : null;
+                console.log('[TRACE] Looking for parent record ID in row', rowIndex);
+                console.log('[TRACE] Available columns:', this.columns.map(c => ({ id: c.id, name: c.name })));
+
+                // Find a column whose name ends with "ID"
+                const idColumn = this.columns.find(c => c.name && c.name.endsWith('ID'));
+                console.log('[TRACE] Found ID column:', idColumn);
+
+                let parentRecordId = null;
+                if (idColumn) {
+                    const idColIndex = this.columns.findIndex(c => c.id === idColumn.id);
+                    parentRecordId = idColIndex !== -1 && this.data[rowIndex] ? this.data[rowIndex][idColIndex] : null;
+                    console.log('[TRACE] Parent record ID from ID column:', parentRecordId);
+                }
 
                 if (!parentRecordId) {
+                    console.log('[TRACE] Failed to find parent record ID');
                     throw new Error('Не удалось определить ID родительской записи');
                 }
+
+                console.log('[TRACE] Using parent record ID:', parentRecordId);
 
                 let url;
                 if (parentInfo.isFirstColumn) {
