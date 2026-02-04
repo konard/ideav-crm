@@ -876,6 +876,7 @@ class IntegramTable {
             const colType = cell.dataset.colType;
             const format = cell.dataset.colFormat;
             const isRef = cell.dataset.colRef === '1';
+            const rowIndex = parseInt(cell.dataset.rowIndex);
 
             console.log('[TRACE] startInlineEdit - initial cell data:', {
                 recordId,
@@ -883,6 +884,7 @@ class IntegramTable {
                 colType,
                 format,
                 isRef,
+                rowIndex,
                 cellText: cell.textContent?.substring(0, 50)
             });
 
@@ -893,7 +895,7 @@ class IntegramTable {
 
             // Determine parent record using the logic from the issue
             console.log('[TRACE] startInlineEdit - determining parent record...');
-            const parentInfo = await this.determineParentRecord(colId, colType, recordId);
+            const parentInfo = await this.determineParentRecord(colId, colType, recordId, rowIndex);
             console.log('[TRACE] startInlineEdit - parent info result:', parentInfo);
 
             if (!parentInfo) {
@@ -1014,12 +1016,13 @@ class IntegramTable {
             return '';
         }
 
-        async determineParentRecord(colId, colType, recordId) {
+        async determineParentRecord(colId, colType, recordId, rowIndex) {
             console.log('[TRACE] determineParentRecord - START');
             console.log('[TRACE] determineParentRecord - inputs:', {
                 colId,
                 colType,
-                recordId
+                recordId,
+                rowIndex
             });
 
             // Find the column object
@@ -1087,13 +1090,22 @@ class IntegramTable {
                     idColType: idColumn.type
                 });
 
-                // Get the parent record ID from this ID column
-                // We need to know which row we're in
-                let parentRecordId = recordId;
-                if (recordId === 'dynamic') {
-                    // Need to extract from the data - but we don't have rowIndex here
-                    // This should have been passed in renderCell, so recordId shouldn't be 'dynamic' here
-                    console.log('[TRACE] determineParentRecord - WARNING: recordId is still dynamic, cannot determine parent');
+                // Get the parent record ID from this ID column by extracting from row data
+                let parentRecordId = '';
+                if (rowIndex !== undefined && rowIndex !== null) {
+                    const idColIndex = this.columns.findIndex(c => c.id === idColumn.id);
+                    if (idColIndex !== -1 && this.data[rowIndex]) {
+                        parentRecordId = this.data[rowIndex][idColIndex] || '';
+                        console.log('[TRACE] determineParentRecord - extracted parent ID from row data:', {
+                            rowIndex,
+                            idColIndex,
+                            parentRecordId
+                        });
+                    } else {
+                        console.log('[TRACE] determineParentRecord - WARNING: could not find ID column index or row data');
+                    }
+                } else {
+                    console.log('[TRACE] determineParentRecord - WARNING: rowIndex not provided, cannot extract parent ID');
                 }
 
                 console.log('[TRACE] determineParentRecord - RESULT (first column case):', {
@@ -1144,10 +1156,22 @@ class IntegramTable {
                             parentIdColType: parentIdColumn.type
                         });
 
-                        // Get the parent record ID from this ID column
-                        let parentRecordId = recordId;
-                        if (recordId === 'dynamic') {
-                            console.log('[TRACE] determineParentRecord - WARNING: recordId is still dynamic, cannot determine parent');
+                        // Get the parent record ID from this ID column by extracting from row data
+                        let parentRecordId = '';
+                        if (rowIndex !== undefined && rowIndex !== null) {
+                            const parentIdColIndex = this.columns.findIndex(c => c.id === parentIdColumn.id);
+                            if (parentIdColIndex !== -1 && this.data[rowIndex]) {
+                                parentRecordId = this.data[rowIndex][parentIdColIndex] || '';
+                                console.log('[TRACE] determineParentRecord - extracted parent ID from row data (requisite case):', {
+                                    rowIndex,
+                                    parentIdColIndex,
+                                    parentRecordId
+                                });
+                            } else {
+                                console.log('[TRACE] determineParentRecord - WARNING: could not find parent ID column index or row data');
+                            }
+                        } else {
+                            console.log('[TRACE] determineParentRecord - WARNING: rowIndex not provided, cannot extract parent ID');
                         }
 
                         console.log('[TRACE] determineParentRecord - RESULT (requisite case):', {
