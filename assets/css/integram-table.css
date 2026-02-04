@@ -1424,3 +1424,83 @@ td:has(.inline-editor) {
 .integram-table.compact td:has(.inline-editor) {
     padding: 2px !important;
 }
+
+/* ========================================
+   Inline Reference Editor Styles (ref:1)
+   ======================================== */
+
+.inline-editor-loading {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--md-text-secondary);
+    font-style: italic;
+}
+
+.inline-editor-reference {
+    width: 100%;
+    position: relative;
+    background: var(--md-surface);
+    border: 2px solid var(--md-primary);
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.inline-editor-reference-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid var(--md-divider);
+    font-size: 14px;
+    font-family: 'Roboto', sans-serif;
+    color: var(--md-text-primary);
+    background: var(--md-surface);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.inline-editor-reference-search::placeholder {
+    color: var(--md-text-hint);
+}
+
+.inline-editor-reference-dropdown {
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--md-surface);
+}
+
+.inline-editor-reference-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--md-text-primary);
+    font-size: 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.inline-editor-reference-option:last-child {
+    border-bottom: none;
+}
+
+.inline-editor-reference-option:hover,
+.inline-editor-reference-option:focus {
+    background-color: var(--md-hover);
+    outline: none;
+}
+
+.inline-editor-reference-option:active {
+    background-color: var(--md-selected);
+}
+
+.inline-editor-reference-empty {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--md-text-secondary);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Visual feedback for reference editing active state */
+td:has(.inline-editor-reference) {
+    background-color: rgba(25, 118, 210, 0.08) !important;
+    padding: 4px !important;
+}

@@ -701,7 +701,9 @@ class IntegramTable {
                 }
 
                 if (recordId && recordId !== '' && recordId !== '0') {
-                    editableAttrs = ` data-editable="true" data-record-id="${ recordId }" data-col-id="${ column.id }" data-col-type="${ column.type }" data-col-format="${ format }" data-row-index="${ rowIndex }"`;
+                    // Add ref attribute if this is a reference field
+                    const refAttr = column.ref === 1 ? ` data-col-ref="1"` : '';
+                    editableAttrs = ` data-editable="true" data-record-id="${ recordId }" data-col-id="${ column.id }" data-col-type="${ column.type }" data-col-format="${ format }" data-row-index="${ rowIndex }"${ refAttr }`;
                     cellClass += ' inline-editable';
                 }
             }
@@ -873,12 +875,14 @@ class IntegramTable {
             const colId = cell.dataset.colId;
             const colType = cell.dataset.colType;
             const format = cell.dataset.colFormat;
+            const isRef = cell.dataset.colRef === '1';
 
             console.log('[TRACE] startInlineEdit - initial cell data:', {
                 recordId,
                 colId,
                 colType,
                 format,
+                isRef,
                 cellText: cell.textContent?.substring(0, 50)
             });
 
@@ -921,13 +925,18 @@ class IntegramTable {
                 colId,
                 colType,
                 format,
+                isRef,
                 parentInfo,
                 originalValue: currentValue
             };
 
             console.log('[TRACE] startInlineEdit - rendering inline editor');
-            // Create inline editor based on format
-            this.renderInlineEditor(cell, currentValue, format);
+            // Create inline editor based on format or reference type
+            if (isRef) {
+                this.renderReferenceEditor(cell, currentValue);
+            } else {
+                this.renderInlineEditor(cell, currentValue, format);
+            }
         }
 
         extractCellValue(cell) {
@@ -1266,6 +1275,259 @@ class IntegramTable {
                 // Store handler reference to clean up if canceled
                 this.currentEditingCell.outsideClickHandler = outsideClickHandler;
             }, 100);
+        }
+
+        async renderReferenceEditor(cell, currentValue) {
+            // Save original content for cancel
+            const originalContent = cell.innerHTML;
+
+            const { colType, parentInfo } = this.currentEditingCell;
+
+            // Show loading indicator
+            cell.innerHTML = '<div class="inline-editor-loading">Загрузка...</div>';
+
+            try {
+                // Fetch reference options
+                const options = await this.fetchReferenceOptions(colType, parentInfo.parentRecordId);
+
+                // Create dropdown with search
+                const editorHtml = `
+                    <div class="inline-editor-reference">
+                        <input type="text"
+                               class="inline-editor-reference-search"
+                               placeholder="Поиск..."
+                               autocomplete="off">
+                        <div class="inline-editor-reference-dropdown">
+                            ${this.renderReferenceOptions(options, currentValue)}
+                        </div>
+                    </div>
+                `;
+
+                cell.innerHTML = editorHtml;
+
+                const searchInput = cell.querySelector('.inline-editor-reference-search');
+                const dropdown = cell.querySelector('.inline-editor-reference-dropdown');
+
+                // Store original options for filtering
+                this.currentEditingCell.referenceOptions = options;
+                this.currentEditingCell.allOptionsFetched = Object.keys(options).length < 50;
+
+                // Focus the search input
+                searchInput.focus();
+
+                // Handle search input
+                let searchTimeout;
+                searchInput.addEventListener('input', async (e) => {
+                    const searchText = e.target.value.trim();
+
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(async () => {
+                        if (searchText === '') {
+                            // Show original options
+                            dropdown.innerHTML = this.renderReferenceOptions(this.currentEditingCell.referenceOptions, currentValue);
+                        } else {
+                            // Filter locally first
+                            const filtered = this.filterReferenceOptions(this.currentEditingCell.referenceOptions, searchText, currentValue);
+                            dropdown.innerHTML = this.renderReferenceOptions(filtered, currentValue);
+
+                            // If we have exactly 50 options (not all fetched), re-query from server
+                            if (!this.currentEditingCell.allOptionsFetched) {
+                                try {
+                                    const serverOptions = await this.fetchReferenceOptions(colType, parentInfo.parentRecordId, searchText);
+                                    this.currentEditingCell.referenceOptions = serverOptions;
+                                    dropdown.innerHTML = this.renderReferenceOptions(serverOptions, currentValue);
+                                } catch (error) {
+                                    console.error('Error re-querying reference options:', error);
+                                }
+                            }
+                        }
+                    }, 300);
+                });
+
+                // Handle option selection
+                dropdown.addEventListener('click', async (e) => {
+                    const option = e.target.closest('.inline-editor-reference-option');
+                    if (option) {
+                        const selectedId = option.dataset.id;
+                        const selectedText = option.dataset.text;
+                        await this.saveReferenceEdit(selectedId, selectedText);
+                    }
+                });
+
+                // Handle keyboard navigation
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        this.cancelInlineEdit(originalContent);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Select first option
+                        const firstOption = dropdown.querySelector('.inline-editor-reference-option');
+                        if (firstOption) {
+                            const selectedId = firstOption.dataset.id;
+                            const selectedText = firstOption.dataset.text;
+                            this.saveReferenceEdit(selectedId, selectedText);
+                        }
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const firstOption = dropdown.querySelector('.inline-editor-reference-option');
+                        if (firstOption) {
+                            firstOption.focus();
+                        }
+                    }
+                });
+
+                // Handle keyboard navigation in dropdown
+                dropdown.addEventListener('keydown', (e) => {
+                    const currentOption = document.activeElement;
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const nextOption = currentOption.nextElementSibling;
+                        if (nextOption) {
+                            nextOption.focus();
+                        }
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prevOption = currentOption.previousElementSibling;
+                        if (prevOption) {
+                            prevOption.focus();
+                        } else {
+                            searchInput.focus();
+                        }
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        currentOption.click();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        this.cancelInlineEdit(originalContent);
+                    }
+                });
+
+                // Click outside to cancel (with small delay to avoid immediate trigger)
+                setTimeout(() => {
+                    const outsideClickHandler = (e) => {
+                        if (!cell.contains(e.target)) {
+                            document.removeEventListener('click', outsideClickHandler);
+                            this.cancelInlineEdit(originalContent);
+                        }
+                    };
+                    document.addEventListener('click', outsideClickHandler);
+                    this.currentEditingCell.outsideClickHandler = outsideClickHandler;
+                }, 100);
+
+            } catch (error) {
+                console.error('Error rendering reference editor:', error);
+                this.showToast(`Ошибка загрузки справочника: ${error.message}`, 'error');
+                this.cancelInlineEdit(originalContent);
+            }
+        }
+
+        async fetchReferenceOptions(colType, parentRecordId, searchText = '') {
+            const apiBase = this.getApiBase();
+            const params = new URLSearchParams({
+                JSON: '',
+                id: parentRecordId,
+                LIMIT: '50'
+            });
+
+            if (searchText) {
+                params.append('q', searchText);
+            }
+
+            const url = `${apiBase}/_ref_reqs/${colType}?${params}`;
+            console.log('[TRACE] fetchReferenceOptions - URL:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('[TRACE] fetchReferenceOptions - received data:', data);
+            return data;
+        }
+
+        renderReferenceOptions(options, currentValue) {
+            // Filter out current value from options
+            const filteredOptions = Object.entries(options).filter(([id, text]) => text !== currentValue);
+
+            if (filteredOptions.length === 0) {
+                return '<div class="inline-editor-reference-empty">Нет доступных значений</div>';
+            }
+
+            return filteredOptions.map(([id, text]) => {
+                const escapedText = this.escapeHtml(text);
+                return `<div class="inline-editor-reference-option" data-id="${id}" data-text="${escapedText}" tabindex="0">${escapedText}</div>`;
+            }).join('');
+        }
+
+        filterReferenceOptions(options, searchText, currentValue) {
+            const lowerSearch = searchText.toLowerCase();
+            const filtered = {};
+
+            for (const [id, text] of Object.entries(options)) {
+                if (text !== currentValue && text.toLowerCase().includes(lowerSearch)) {
+                    filtered[id] = text;
+                }
+            }
+
+            return filtered;
+        }
+
+        async saveReferenceEdit(selectedId, selectedText) {
+            if (!this.currentEditingCell) {
+                return;
+            }
+
+            const { cell, colType, parentInfo } = this.currentEditingCell;
+
+            try {
+                const apiBase = this.getApiBase();
+                const params = new URLSearchParams();
+
+                // Add XSRF token
+                if (typeof xsrf !== 'undefined') {
+                    params.append('_xsrf', xsrf);
+                }
+
+                params.append(`t${colType}`, selectedId);
+
+                const url = `${apiBase}/_m_set/${parentInfo.parentRecordId}?JSON`;
+
+                console.log('[TRACE] saveReferenceEdit - URL:', url);
+                console.log('[TRACE] saveReferenceEdit - params:', params.toString());
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: params.toString()
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // Update the cell display with the selected text
+                this.updateCellDisplay(cell, selectedText, this.currentEditingCell.format);
+
+                this.showToast('Изменения сохранены', 'success');
+
+            } catch (error) {
+                console.error('Error saving reference edit:', error);
+                this.showToast(`Ошибка сохранения: ${error.message}`, 'error');
+                // Restore original content on error
+                this.cancelInlineEdit(cell.dataset.originalContent);
+            } finally {
+                // Clean up
+                if (this.currentEditingCell && this.currentEditingCell.outsideClickHandler) {
+                    document.removeEventListener('click', this.currentEditingCell.outsideClickHandler);
+                }
+                this.currentEditingCell = null;
+            }
         }
 
         async saveInlineEdit(newValue) {
