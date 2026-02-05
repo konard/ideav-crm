@@ -110,7 +110,7 @@
     background: var(--md-surface);
     box-shadow: var(--md-elevation-1);
     border-radius: 4px;
-    overflow: hidden;
+    overflow: overlay;
 }
 
 .integram-table th {
