@@ -1322,7 +1322,7 @@ class IntegramTable {
             // Save original content for cancel
             const originalContent = cell.innerHTML;
 
-            const { colType, parentInfo } = this.currentEditingCell;
+            const { colId, colType, parentInfo } = this.currentEditingCell;
 
             // Show loading indicator
             cell.innerHTML = '<div class="inline-editor-loading">Загрузка...</div>';
@@ -1330,6 +1330,17 @@ class IntegramTable {
             try {
                 // Fetch reference options
                 const options = await this.fetchReferenceOptions(colType, parentInfo.parentRecordId);
+
+                // Find the column object to check for granted and orig
+                const column = this.columns.find(c => c.id === colId);
+                const hasGranted = column && column.granted === 1;
+                const origType = column && column.orig ? column.orig : null;
+
+                // Determine button to show: "+" button if granted=1 and orig exists, otherwise "×" (clear)
+                const showAddButton = hasGranted && origType !== null;
+                const buttonHtml = showAddButton
+                    ? `<button class="inline-editor-reference-add" title="Создать запись" aria-label="Создать запись">+</button>`
+                    : `<button class="inline-editor-reference-clear" title="Очистить значение" aria-label="Очистить значение">×</button>`;
 
                 // Create dropdown with search
                 const editorHtml = `
@@ -1339,7 +1350,7 @@ class IntegramTable {
                                    class="inline-editor-reference-search"
                                    placeholder="Поиск..."
                                    autocomplete="off">
-                            <button class="inline-editor-reference-clear" title="Очистить значение" aria-label="Очистить значение">×</button>
+                            ${buttonHtml}
                         </div>
                         <div class="inline-editor-reference-dropdown">
                             ${this.renderReferenceOptions(options, currentValue)}
@@ -1352,6 +1363,7 @@ class IntegramTable {
                 const searchInput = cell.querySelector('.inline-editor-reference-search');
                 const dropdown = cell.querySelector('.inline-editor-reference-dropdown');
                 const clearButton = cell.querySelector('.inline-editor-reference-clear');
+                const addButton = cell.querySelector('.inline-editor-reference-add');
 
                 // Store original options for filtering
                 this.currentEditingCell.referenceOptions = options;
@@ -1400,11 +1412,27 @@ class IntegramTable {
                 });
 
                 // Handle clear button click
-                clearButton.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    await this.saveReferenceEdit('', '');
-                });
+                if (clearButton) {
+                    clearButton.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        await this.saveReferenceEdit('', '');
+                    });
+                }
+
+                // Handle add button click (create new record)
+                if (addButton && origType) {
+                    addButton.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Get the search input value as the initial value for new record
+                        const inputValue = searchInput.value.trim();
+
+                        // Open create form for the type specified in orig
+                        await this.openCreateFormForReference(origType, inputValue, parentInfo.parentRecordId);
+                    });
+                }
 
                 // Handle keyboard navigation
                 searchInput.addEventListener('keydown', (e) => {
@@ -1579,6 +1607,211 @@ class IntegramTable {
                     document.removeEventListener('click', this.currentEditingCell.outsideClickHandler);
                 }
                 this.currentEditingCell = null;
+            }
+        }
+
+        async openCreateFormForReference(typeId, initialValue, parentRecordId) {
+            // This method opens a create form for a new record when clicked from reference editor "+" button
+            // After creation, it will set the newly created record ID and value in the reference field
+
+            try {
+                // Fetch metadata for the type
+                if (!this.metadataCache[typeId]) {
+                    this.metadataCache[typeId] = await this.fetchMetadata(typeId);
+                }
+
+                const metadata = this.metadataCache[typeId];
+
+                // Render the create form modal with special handling for reference creation
+                this.renderCreateFormForReference(metadata, typeId, initialValue, parentRecordId);
+
+            } catch (error) {
+                console.error('Error opening create form for reference:', error);
+                this.showToast(`Ошибка открытия формы: ${error.message}`, 'error');
+            }
+        }
+
+        renderCreateFormForReference(metadata, typeId, initialValue, parentRecordId) {
+            // Track modal depth for z-index stacking
+            if (!window._integramModalDepth) {
+                window._integramModalDepth = 0;
+            }
+            window._integramModalDepth++;
+            const modalDepth = window._integramModalDepth;
+            const baseZIndex = 1000 + (modalDepth * 10);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'edit-form-overlay';
+            overlay.style.zIndex = baseZIndex;
+            overlay.dataset.modalDepth = modalDepth;
+
+            const modal = document.createElement('div');
+            modal.className = 'edit-form-modal';
+            modal.style.zIndex = baseZIndex + 1;
+            modal.dataset.modalDepth = modalDepth;
+            modal.dataset.overlayRef = 'true';
+            modal.dataset.isReferenceCreate = 'true'; // Mark this as a special reference creation modal
+
+            // Store reference to overlay on modal for proper cleanup
+            modal._overlayElement = overlay;
+
+            const title = `Создание: ${metadata.val}`;
+
+            // Build attributes form HTML (similar to renderAttributesForm but simplified for create mode)
+            const reqs = metadata.reqs || [];
+            const regularFields = reqs.filter(req => !req.arr_id);
+
+            let attributesHtml = `
+                <div class="form-group">
+                    <label for="field-main-ref-create">${metadata.val} <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="field-main-ref-create" name="main" value="${this.escapeHtml(initialValue)}" required>
+                </div>
+            `;
+
+            // Add other fields if needed (simplified, only required fields for now)
+            regularFields.forEach(req => {
+                const attrs = this.parseAttrs(req.attrs);
+                const fieldName = attrs.alias || req.val;
+                const isRequired = attrs.required;
+
+                if (isRequired) {
+                    attributesHtml += `
+                        <div class="form-group">
+                            <label for="field-ref-${req.id}">${fieldName} <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="field-ref-${req.id}" name="t${req.id}" required>
+                        </div>
+                    `;
+                }
+            });
+
+            let formHtml = `
+                <div class="edit-form-header">
+                    <h5>${title}</h5>
+                    <button class="edit-form-close" data-close-modal-ref="true">×</button>
+                </div>
+                <div class="edit-form-body">
+                    <form id="edit-form-ref-create" class="edit-form">
+                        ${attributesHtml}
+                    </form>
+                </div>
+                <div class="edit-form-footer">
+                    <div class="edit-form-footer-buttons">
+                        <button type="button" class="btn btn-primary" id="save-record-ref-btn">Сохранить</button>
+                        <button type="button" class="btn btn-secondary" data-close-modal-ref="true">Отмена</button>
+                    </div>
+                </div>
+            `;
+
+            modal.innerHTML = formHtml;
+            document.body.appendChild(overlay);
+            document.body.appendChild(modal);
+
+            // Attach save handler
+            const saveBtn = modal.querySelector('#save-record-ref-btn');
+            saveBtn.addEventListener('click', async () => {
+                await this.saveRecordForReference(modal, typeId, parentRecordId);
+            });
+
+            // Close modal helper function
+            const closeModal = () => {
+                modal.remove();
+                overlay.remove();
+                window._integramModalDepth = Math.max(0, (window._integramModalDepth || 1) - 1);
+            };
+
+            // Attach close handlers to buttons with data-close-modal-ref attribute
+            modal.querySelectorAll('[data-close-modal-ref="true"]').forEach(btn => {
+                btn.addEventListener('click', closeModal);
+            });
+
+            overlay.addEventListener('click', closeModal);
+        }
+
+        async saveRecordForReference(modal, typeId, parentRecordId) {
+            const form = modal.querySelector('#edit-form-ref-create');
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+
+            // Add XSRF token
+            if (typeof xsrf !== 'undefined') {
+                params.append('_xsrf', xsrf);
+            }
+
+            // Add all form fields (skip empty parameters so server can fill defaults)
+            for (const [key, value] of formData.entries()) {
+                if (value !== '' && value !== null && value !== undefined) {
+                    params.append(key, value);
+                }
+            }
+
+            // Get main value
+            const mainValue = formData.get('main');
+            if (mainValue !== '' && mainValue !== null && mainValue !== undefined) {
+                params.append('t0', mainValue);
+            }
+
+            const apiBase = this.getApiBase();
+            const url = `${apiBase}/_m_new/${typeId}?JSON&up=${parentRecordId || 1}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: params.toString()
+                });
+
+                const text = await response.text();
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    // If not JSON, check if it's an error message
+                    if (text.includes('error') || !response.ok) {
+                        throw new Error(text);
+                    }
+                    // Otherwise treat as success
+                    result = { success: true };
+                }
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // Extract created record ID and value from response
+                // According to the issue: "её id приходит в ключе obj JSON в ответ на запрос _m_new"
+                const createdId = result.obj || result.id || result.i;
+                const createdValue = mainValue; // Use the value we just created
+
+                // Close the create form modal
+                modal.remove();
+                document.querySelector('.edit-form-overlay:last-of-type').remove();
+                window._integramModalDepth = Math.max(0, (window._integramModalDepth || 1) - 1);
+
+                // Show success message
+                this.showToast('Запись успешно создана', 'success');
+
+                // Now set the created record in the reference field that's still open
+                if (this.currentEditingCell && createdId) {
+                    await this.saveReferenceEdit(createdId, createdValue);
+                } else {
+                    // Fallback: just close the inline editor
+                    if (this.currentEditingCell) {
+                        this.cancelInlineEdit(this.currentEditingCell.cell.innerHTML);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error saving record for reference:', error);
+                this.showToast(`Ошибка сохранения: ${error.message}`, 'error');
             }
         }
 
