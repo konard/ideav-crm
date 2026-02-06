@@ -1372,7 +1372,9 @@ class IntegramTable {
 
                 // Store original options for filtering
                 this.currentEditingCell.referenceOptions = options;
+                // Track if all options have been fetched (50+ means we only got first 50)
                 this.currentEditingCell.allOptionsFetched = Object.keys(options).length < 50;
+                console.log('[TRACE] renderReferenceEditor - options count:', Object.keys(options).length, ', allOptionsFetched:', this.currentEditingCell.allOptionsFetched);
 
                 // Focus the search input
                 searchInput.focus();
