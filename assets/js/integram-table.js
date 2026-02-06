@@ -1336,12 +1336,14 @@ class IntegramTable {
                 const hasGranted = column && column.granted === 1;
                 const origType = column && column.orig ? column.orig : null;
 
-                // Determine button to show: "+" button if granted=1 and orig exists, otherwise "×" (clear)
-                // The "+" button is initially hidden and will be shown only when search input has non-zero length
+                // Always show clear button. If granted=1 and orig exists, also show add button (initially hidden)
+                // The "+" button will be shown only when search input has non-zero length
+                // The "×" button will be hidden when search input has text (and add button is shown)
                 const showAddButton = hasGranted && origType !== null;
-                const buttonHtml = showAddButton
-                    ? `<button class="inline-editor-reference-add" style="display: none;" title="Создать запись" aria-label="Создать запись">+</button>`
-                    : `<button class="inline-editor-reference-clear" title="Очистить значение" aria-label="Очистить значение">×</button>`;
+                let buttonHtml = `<button class="inline-editor-reference-clear" title="Очистить значение" aria-label="Очистить значение">×</button>`;
+                if (showAddButton) {
+                    buttonHtml += `<button class="inline-editor-reference-add" style="display: none;" title="Создать запись" aria-label="Создать запись">+</button>`;
+                }
 
                 // Create dropdown with search
                 const editorHtml = `
@@ -1378,12 +1380,22 @@ class IntegramTable {
                 searchInput.addEventListener('input', async (e) => {
                     const searchText = e.target.value.trim();
 
-                    // Show/hide add button based on search input length (issue #215)
-                    if (addButton) {
-                        if (searchText.length > 0) {
+                    // Toggle buttons based on search input length (issue #217)
+                    // When search has text: show add button (if available), hide clear button
+                    // When search is empty: hide add button, show clear button
+                    if (searchText.length > 0) {
+                        if (addButton) {
                             addButton.style.display = '';
-                        } else {
+                        }
+                        if (clearButton) {
+                            clearButton.style.display = 'none';
+                        }
+                    } else {
+                        if (addButton) {
                             addButton.style.display = 'none';
+                        }
+                        if (clearButton) {
+                            clearButton.style.display = '';
                         }
                     }
 
