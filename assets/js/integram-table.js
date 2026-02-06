@@ -1783,7 +1783,7 @@ class IntegramTable {
             }
 
             const apiBase = this.getApiBase();
-            const url = `${apiBase}/_m_new/${typeId}?JSON&up=${parentRecordId || 1}`;
+            const url = `${apiBase}/_m_new/${typeId}?JSON&up=1`; // ${parentRecordId || 1}
 
             try {
                 const response = await fetch(url, {
