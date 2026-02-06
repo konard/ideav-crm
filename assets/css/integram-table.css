@@ -379,9 +379,9 @@
 
 .filter-input-with-icon {
     flex: 1;
-    padding: 6px 8px 6px 23px;  /* Extra left padding for icon */
-    border: 1px solid var(--md-divider);
-    border-radius: 4px;
+    padding: 4px 0px 4px 23px;  /* Extra left padding for icon */
+    border: none; /* 1px solid var(--md-divider); */
+    /* border-radius: 4px; */
     font-size: 14px;
     font-family: 'Roboto', sans-serif;
     color: var(--md-text-primary);
