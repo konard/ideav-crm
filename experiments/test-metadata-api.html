@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Metadata API</title>
+</head>
+<body>
+    <h1>Testing Metadata API Endpoints</h1>
+    <button onclick="testTypeEdit()">Test /type_edit/332?JSON</button>
+    <button onclick="testMetadata()">Test /metadata/332</button>
+    <pre id="output"></pre>
+
+    <script>
+        const db = 'crm'; // Replace with actual db name if needed
+
+        function testTypeEdit() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://' + window.location.hostname + '/' + db + '/type_edit/332?JSON', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        document.getElementById('output').textContent =
+                            '=== /type_edit/332?JSON ===\n' +
+                            JSON.stringify(data, null, 2);
+                    } catch(e) {
+                        document.getElementById('output').textContent = 'Error: ' + e.message;
+                    }
+                } else {
+                    document.getElementById('output').textContent = 'HTTP Error: ' + xhr.status;
+                }
+            };
+            xhr.onerror = function() {
+                document.getElementById('output').textContent = 'Network error';
+            };
+            xhr.send();
+        }
+
+        function testMetadata() {
+            // Extract base URL
+            const apiBase = '/' + db;
+
+            fetch(apiBase + '/metadata/332')
+                .then(response => response.text())
+                .then(text => {
+                    try {
+                        const data = JSON.parse(text);
+                        document.getElementById('output').textContent =
+                            '=== /metadata/332 ===\n' +
+                            JSON.stringify(data, null, 2);
+                    } catch(e) {
+                        document.getElementById('output').textContent =
+                            '=== /metadata/332 (raw) ===\n' + text;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('output').textContent = 'Error: ' + error.message;
+                });
+        }
+    </script>
+</body>
+</html>
