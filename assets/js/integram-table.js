@@ -1372,7 +1372,9 @@ class IntegramTable {
 
                 // Store original options for filtering
                 this.currentEditingCell.referenceOptions = options;
+                // Track if all options have been fetched (50+ means we only got first 50)
                 this.currentEditingCell.allOptionsFetched = Object.keys(options).length < 50;
+                console.log('[TRACE] renderReferenceEditor - options count:', Object.keys(options).length, ', allOptionsFetched:', this.currentEditingCell.allOptionsFetched);
 
                 // Focus the search input
                 searchInput.focus();
@@ -1815,7 +1817,8 @@ class IntegramTable {
                 // Extract created record ID and value from response
                 // According to the issue: "её id приходит в ключе obj JSON в ответ на запрос _m_new"
                 const createdId = result.obj || result.id || result.i;
-                const createdValue = mainValue; // Use the value we just created
+                // Use the value from the response (result.val) if available, otherwise use the input value
+                const createdValue = result.val || mainValue;
 
                 // Close the create form modal
                 modal.remove();
