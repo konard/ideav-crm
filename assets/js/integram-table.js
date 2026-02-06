@@ -1512,7 +1512,15 @@ class IntegramTable {
                 // Click outside to cancel (with small delay to avoid immediate trigger)
                 setTimeout(() => {
                     const outsideClickHandler = (e) => {
+                        // Don't cancel if clicking inside reference creation modal
+                        const refModal = e.target.closest('[data-is-reference-create="true"]');
+                        const refOverlay = e.target.closest('.edit-form-overlay');
+                        if (refModal || refOverlay) {
+                            console.log('[TRACE] outsideClickHandler - click inside reference modal, ignoring');
+                            return;
+                        }
                         if (!cell.contains(e.target)) {
+                            console.log('[TRACE] outsideClickHandler - click outside cell, canceling inline edit');
                             document.removeEventListener('click', outsideClickHandler);
                             this.cancelInlineEdit(originalContent);
                         }
@@ -1820,6 +1828,10 @@ class IntegramTable {
                 // Use the value from the response (result.val) if available, otherwise use the input value
                 const createdValue = result.val || mainValue;
 
+                console.log('[TRACE] saveRecordForReference - response:', JSON.stringify(result));
+                console.log('[TRACE] saveRecordForReference - createdId:', createdId, 'createdValue:', createdValue);
+                console.log('[TRACE] saveRecordForReference - currentEditingCell before modal close:', this.currentEditingCell ? 'exists' : 'null');
+
                 // Close the create form modal
                 modal.remove();
                 document.querySelector('.edit-form-overlay:last-of-type').remove();
@@ -1828,10 +1840,14 @@ class IntegramTable {
                 // Show success message
                 this.showToast('Запись успешно создана', 'success');
 
+                console.log('[TRACE] saveRecordForReference - currentEditingCell after modal close:', this.currentEditingCell ? 'exists' : 'null');
+
                 // Now set the created record in the reference field that's still open
                 if (this.currentEditingCell && createdId) {
+                    console.log('[TRACE] saveRecordForReference - calling saveReferenceEdit with id:', createdId, 'value:', createdValue);
                     await this.saveReferenceEdit(createdId, createdValue);
                 } else {
+                    console.log('[TRACE] saveRecordForReference - cannot call saveReferenceEdit, currentEditingCell:', this.currentEditingCell ? 'exists' : 'null', 'createdId:', createdId);
                     // Fallback: just close the inline editor
                     if (this.currentEditingCell) {
                         this.cancelInlineEdit(this.currentEditingCell.cell.innerHTML);
